@@ -45,6 +45,14 @@
             opacity: 0.9;
         }
 
+        .demo-banner {
+            background: #10b981;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            font-weight: 600;
+        }
+
         .content {
             padding: 40px;
         }
@@ -91,31 +99,135 @@
             font-size: 1.8em;
         }
 
-        .activity-list {
-            list-style: none;
-        }
-
-        .activity-item {
+        .try-it-section {
             background: #f8f9fa;
-            padding: 15px;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 40px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e5e7eb;
             border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        .form-group textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .btn-demo {
+            background: #10b981;
+            margin-left: 10px;
+        }
+
+        .result-box {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .result-box.show {
+            display: block;
+        }
+
+        .result-box h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .result-item {
             margin-bottom: 10px;
-            display: flex;
-            align-items: center;
-            gap: 15px;
+            padding: 10px;
+            background: white;
+            border-radius: 6px;
         }
 
-        .activity-icon {
-            font-size: 1.5em;
+        .result-item strong {
+            color: #667eea;
         }
 
-        .activity-content {
-            flex: 1;
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
         }
 
-        .activity-time {
-            color: #666;
-            font-size: 0.9em;
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .steps-list {
+            list-style: none;
+            margin-top: 15px;
+        }
+
+        .step-item {
+            padding: 10px;
+            margin-bottom: 8px;
+            background: white;
+            border-radius: 6px;
+            border-left: 4px solid #667eea;
+        }
+
+        .step-item.completed {
+            border-left-color: #10b981;
         }
 
         .badge {
@@ -142,18 +254,16 @@
             color: white;
         }
 
+        .badge-demo {
+            background: #10b981;
+            color: white;
+        }
+
         .footer {
             background: #f8f9fa;
             padding: 20px;
             text-align: center;
             color: #666;
-        }
-
-        .tech-stack {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin-top: 20px;
         }
     </style>
 </head>
@@ -164,36 +274,98 @@
             <p>Self-Healing Deployment AI Agent</p>
         </div>
 
+        <div class="demo-banner" id="demo-banner" style="display: none;">
+            🎉 Demo Mode Active - No setup required! Try it now below.
+        </div>
+
         <div class="content">
-            <div class="status-grid">
+            <!-- Status Cards -->
+            <div class="status-grid" id="status-grid">
                 <div class="status-card">
                     <h3>📡 Cline CLI</h3>
-                    <div class="value" id="cline-status">Connected</div>
+                    <div class="value" id="cline-status">Loading...</div>
                     <div class="label">Tasks Executed: <span id="cline-tasks">0</span></div>
                 </div>
 
                 <div class="status-card">
                     <h3>🧠 Kestra Agent</h3>
-                    <div class="value" id="kestra-status">Active</div>
+                    <div class="value" id="kestra-status">Loading...</div>
                     <div class="label">Decisions Made: <span id="kestra-decisions">0</span></div>
                 </div>
 
                 <div class="status-card">
                     <h3>🎯 Oumi RL</h3>
-                    <div class="value" id="oumi-status">Trained</div>
-                    <div class="label">Success Rate: <span id="oumi-rate">75%</span></div>
+                    <div class="value" id="oumi-status">Loading...</div>
+                    <div class="label">Success Rate: <span id="oumi-rate">0%</span></div>
                 </div>
 
                 <div class="status-card">
                     <h3>📊 Overall</h3>
-                    <div class="value" id="overall-health">Healthy</div>
+                    <div class="value" id="overall-health">Loading...</div>
                     <div class="label">Issues Resolved: <span id="issues-resolved">0</span></div>
                 </div>
             </div>
 
+            <!-- Try It Now Section -->
+            <div class="section try-it-section">
+                <h2>🚀 Try AutoDebugger Now</h2>
+                <p style="margin-bottom: 20px; color: #666;">
+                    Paste an error log or deployment URL below. No setup required - works in demo mode!
+                </p>
+
+                <form id="diagnose-form">
+                    <div class="form-group">
+                        <label for="error-input">Error Log or Message:</label>
+                        <textarea 
+                            id="error-input" 
+                            placeholder="Paste error logs here, e.g.:
+Build failed: exit code 1
+Error: Module not found
+Deployment timeout after 300s"
+                        ></textarea>
+                    </div>
+                    <button type="submit" class="btn" id="diagnose-btn">
+                        🔍 Diagnose Issue
+                    </button>
+                    <button type="button" class="btn btn-demo" id="demo-btn">
+                        🎯 Try Demo Mode
+                    </button>
+                </form>
+
+                <div id="diagnose-result" class="result-box"></div>
+            </div>
+
+            <!-- Autonomous Recovery -->
+            <div class="section try-it-section">
+                <h2>🔄 Full Autonomous Recovery Loop</h2>
+                <p style="margin-bottom: 20px; color: #666;">
+                    Run the complete self-healing loop: Detect → Summarize → Decide → Fix → PR → Review → Deploy
+                </p>
+
+                <form id="autonomous-form">
+                    <div class="form-group">
+                        <label for="deployment-url">Deployment URL:</label>
+                        <input 
+                            type="url" 
+                            id="deployment-url" 
+                            placeholder="https://your-app.vercel.app or https://your-app.onrender.com"
+                        />
+                    </div>
+                    <button type="submit" class="btn" id="autonomous-btn">
+                        🤖 Run Autonomous Recovery
+                    </button>
+                    <button type="button" class="btn btn-demo" id="autonomous-demo-btn">
+                        🎯 Try Demo Mode
+                    </button>
+                </form>
+
+                <div id="autonomous-result" class="result-box"></div>
+            </div>
+
+            <!-- Awards Section -->
             <div class="section">
                 <h2>🎯 Hackathon Awards</h2>
-                <div class="tech-stack">
+                <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px;">
                     <span class="badge badge-success">Infinity Build ($5k) - Cline CLI</span>
                     <span class="badge badge-success">Wakanda Data ($4k) - Kestra AI</span>
                     <span class="badge badge-success">Iron Intelligence ($3k) - Oumi RL</span>
@@ -201,68 +373,244 @@
                     <span class="badge badge-info">Captain Code ($1k) - CodeRabbit</span>
                 </div>
             </div>
-
-            <div class="section">
-                <h2>📊 Recent Activity</h2>
-                <ul class="activity-list" id="activity-list">
-                    <li class="activity-item">
-                        <span class="activity-icon">👁️</span>
-                        <div class="activity-content">
-                            <strong>Monitoring started</strong>
-                            <div class="activity-time">Just now</div>
-                        </div>
-                    </li>
-                    <li class="activity-item">
-                        <span class="activity-icon">🔍</span>
-                        <div class="activity-content">
-                            <strong>Issue diagnosed: Configuration error</strong>
-                            <div class="activity-time">2 minutes ago</div>
-                        </div>
-                    </li>
-                    <li class="activity-item">
-                        <span class="activity-icon">🔧</span>
-                        <div class="activity-content">
-                            <strong>Fix applied successfully</strong>
-                            <div class="activity-time">5 minutes ago</div>
-                        </div>
-                    </li>
-                </ul>
-            </div>
-
-            <div class="section">
-                <h2>🚀 Getting Started</h2>
-                <pre style="background: #f8f9fa; padding: 20px; border-radius: 8px; overflow-x: auto;">
-# Install dependencies
-npm install
-
-# Monitor a deployment
-autodebugger monitor https://your-app.vercel.app
-
-# Diagnose an issue
-autodebugger diagnose error.log
-
-# Auto-fix an issue
-autodebugger fix issue-123
-                </pre>
-            </div>
         </div>
 
         <div class="footer">
             <p>Built for AI Agents Assemble Hackathon | Powered by Cline, Kestra, Oumi, Vercel</p>
+            <p style="margin-top: 10px; font-size: 0.9em;">
+                <a href="https://github.com/Thegenarator/autodebugger" style="color: #667eea;">View on GitHub</a> |
+                <a href="https://github.com/Thegenarator/autodebugger/blob/main/SETUP_FOR_OTHERS.md" style="color: #667eea;">Setup Guide</a>
+            </p>
         </div>
     </div>
 
     <script>
-        // Simulate real-time updates
-        setInterval(() => {
-            document.getElementById('cline-tasks').textContent = 
-                Math.floor(Math.random() * 100) + 50;
-            document.getElementById('kestra-decisions').textContent = 
-                Math.floor(Math.random() * 50) + 25;
-            const rate = (75 + Math.random() * 10).toFixed(1);
-            document.getElementById('oumi-rate').textContent = rate + '%';
-        }, 5000);
+        const API_BASE = window.location.origin;
+
+        // Load status on page load
+        async function loadStatus() {
+            try {
+                const response = await fetch(`${API_BASE}/api/status`);
+                const data = await response.json();
+                
+                if (data.demo) {
+                    document.getElementById('demo-banner').style.display = 'block';
+                }
+
+                document.getElementById('cline-status').textContent = data.cline.connected ? 'Connected' : 'Disconnected';
+                document.getElementById('cline-tasks').textContent = data.cline.tasksExecuted || 0;
+                document.getElementById('kestra-status').textContent = data.kestra.active ? 'Active' : 'Inactive';
+                document.getElementById('kestra-decisions').textContent = data.kestra.decisions || 0;
+                document.getElementById('oumi-status').textContent = data.oumi.trained ? 'Trained' : 'Training';
+                document.getElementById('oumi-rate').textContent = ((data.oumi.successRate || 0) * 100).toFixed(1) + '%';
+                document.getElementById('overall-health').textContent = data.overall.healthy ? 'Healthy' : 'Issues';
+                document.getElementById('issues-resolved').textContent = data.overall.issuesResolved || 0;
+            } catch (error) {
+                console.error('Failed to load status:', error);
+                // Show demo mode if API fails
+                document.getElementById('demo-banner').style.display = 'block';
+            }
+        }
+
+        // Diagnose form
+        document.getElementById('diagnose-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const errorInput = document.getElementById('error-input').value;
+            if (!errorInput.trim()) {
+                alert('Please enter an error message or log');
+                return;
+            }
+
+            const btn = document.getElementById('diagnose-btn');
+            const resultBox = document.getElementById('diagnose-result');
+            btn.disabled = true;
+            btn.innerHTML = 'Analyzing... <span class="loading"></span>';
+            resultBox.style.display = 'none';
+
+            try {
+                const response = await fetch(`${API_BASE}/api/diagnose`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ source: errorInput, demo: false })
+                });
+
+                const data = await response.json();
+                displayDiagnoseResult(data);
+            } catch (error) {
+                resultBox.innerHTML = `<h3>❌ Error</h3><p>${error.message}</p>`;
+                resultBox.classList.add('show');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '🔍 Diagnose Issue';
+            }
+        });
+
+        // Demo button for diagnose
+        document.getElementById('demo-btn').addEventListener('click', async () => {
+            const resultBox = document.getElementById('diagnose-result');
+            resultBox.style.display = 'none';
+
+            const btn = document.getElementById('demo-btn');
+            btn.disabled = true;
+            btn.innerHTML = 'Running Demo... <span class="loading"></span>';
+
+            try {
+                const response = await fetch(`${API_BASE}/api/diagnose`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        source: 'Build failed: exit code 1\nError: Module not found\nDeployment timeout',
+                        demo: true 
+                    })
+                });
+
+                const data = await response.json();
+                displayDiagnoseResult(data);
+            } catch (error) {
+                resultBox.innerHTML = `<h3>❌ Error</h3><p>${error.message}</p>`;
+                resultBox.classList.add('show');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '🎯 Try Demo Mode';
+            }
+        });
+
+        function displayDiagnoseResult(data) {
+            const resultBox = document.getElementById('diagnose-result');
+            let html = `<h3>${data.demo ? '🎯 Demo Mode Result' : '✅ Diagnosis Result'}</h3>`;
+            
+            if (data.demo) {
+                html += '<p><span class="badge badge-demo">DEMO MODE</span></p>';
+            }
+
+            html += `
+                <div class="result-item">
+                    <strong>Issue ID:</strong> ${data.issueId}
+                </div>
+                <div class="result-item">
+                    <strong>Severity:</strong> ${data.severity}
+                </div>
+                <div class="result-item">
+                    <strong>Summary:</strong> ${data.summary}
+                </div>
+                <div class="result-item">
+                    <strong>Root Cause:</strong> ${data.rootCause}
+                </div>
+                <div class="result-item">
+                    <strong>Suggested Fixes:</strong>
+                    <ul style="margin-top: 10px; margin-left: 20px;">
+                        ${data.suggestedFixes.map(fix => 
+                            `<li>${fix.description} (Confidence: ${(fix.confidence * 100).toFixed(0)}%)</li>`
+                        ).join('')}
+                    </ul>
+                </div>
+                <div class="result-item">
+                    <strong>Auto-fix Recommended:</strong> ${data.canAutoFix ? '✅ Yes' : '❌ No'}
+                </div>
+            `;
+
+            resultBox.innerHTML = html;
+            resultBox.classList.add('show');
+        }
+
+        // Autonomous form
+        document.getElementById('autonomous-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const url = document.getElementById('deployment-url').value;
+            if (!url.trim()) {
+                alert('Please enter a deployment URL');
+                return;
+            }
+
+            const btn = document.getElementById('autonomous-btn');
+            const resultBox = document.getElementById('autonomous-result');
+            btn.disabled = true;
+            btn.innerHTML = 'Running Recovery... <span class="loading"></span>';
+            resultBox.style.display = 'none';
+
+            try {
+                const response = await fetch(`${API_BASE}/api/autonomous`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ deploymentUrl: url, demo: false })
+                });
+
+                const data = await response.json();
+                displayAutonomousResult(data);
+            } catch (error) {
+                resultBox.innerHTML = `<h3>❌ Error</h3><p>${error.message}</p>`;
+                resultBox.classList.add('show');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '🤖 Run Autonomous Recovery';
+            }
+        });
+
+        // Demo button for autonomous
+        document.getElementById('autonomous-demo-btn').addEventListener('click', async () => {
+            const resultBox = document.getElementById('autonomous-result');
+            resultBox.style.display = 'none';
+
+            const btn = document.getElementById('autonomous-demo-btn');
+            btn.disabled = true;
+            btn.innerHTML = 'Running Demo... <span class="loading"></span>';
+
+            try {
+                const response = await fetch(`${API_BASE}/api/autonomous`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        deploymentUrl: 'https://demo-app.vercel.app',
+                        demo: true 
+                    })
+                });
+
+                const data = await response.json();
+                displayAutonomousResult(data);
+            } catch (error) {
+                resultBox.innerHTML = `<h3>❌ Error</h3><p>${error.message}</p>`;
+                resultBox.classList.add('show');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '🎯 Try Demo Mode';
+            }
+        });
+
+        function displayAutonomousResult(data) {
+            const resultBox = document.getElementById('autonomous-result');
+            let html = `<h3>${data.demo ? '🎯 Demo Mode Result' : '✅ Autonomous Recovery Result'}</h3>`;
+            
+            if (data.demo) {
+                html += '<p><span class="badge badge-demo">DEMO MODE</span></p>';
+            }
+
+            if (data.steps) {
+                html += '<h4>Recovery Steps:</h4><ul class="steps-list">';
+                data.steps.forEach(step => {
+                    html += `<li class="step-item ${step.status === 'completed' ? 'completed' : ''}">
+                        <strong>Step ${step.step}: ${step.name}</strong> - ${step.message}
+                    </li>`;
+                });
+                html += '</ul>';
+            }
+
+            html += `
+                <div class="result-item">
+                    <strong>Status:</strong> ${data.success ? '✅ Success' : '❌ Failed'}
+                </div>
+                ${data.issueId ? `<div class="result-item"><strong>Issue ID:</strong> ${data.issueId}</div>` : ''}
+                ${data.prNumber ? `<div class="result-item"><strong>PR #${data.prNumber}:</strong> <a href="${data.prUrl}" target="_blank">View PR</a></div>` : ''}
+                ${data.deploymentUrl ? `<div class="result-item"><strong>Deployment:</strong> <a href="${data.deploymentUrl}" target="_blank">${data.deploymentUrl}</a></div>` : ''}
+                ${data.message ? `<div class="result-item"><strong>Message:</strong> ${data.message}</div>` : ''}
+            `;
+
+            resultBox.innerHTML = html;
+            resultBox.classList.add('show');
+        }
+
+        // Load status on page load
+        loadStatus();
+        setInterval(loadStatus, 30000); // Refresh every 30 seconds
     </script>
 </body>
 </html>
-
