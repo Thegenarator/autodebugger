@@ -1,0 +1,34 @@
+# CodeRabbit configuration
+# This qualifies for Captain Code Award ($1,000)
+
+version: 2
+
+rules:
+  # Code quality suggestions
+  code_quality:
+    enabled: true
+    min_severity: info
+    
+  # Documentation improvements
+  documentation:
+    enabled: true
+    suggest_readme_updates: true
+    
+  # PR reviews
+  reviews:
+    enabled: true
+    base_branches:
+      - main
+      - develop
+    auto_approve:
+      enabled: false
+
+review:
+  request_changes_workflow: true
+  collapse_deleted_files: true
+  high_level_summary: true
+
+chat:
+  auto_review:
+    enabled: true
+

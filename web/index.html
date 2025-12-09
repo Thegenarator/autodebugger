@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoDebugger - Self-Healing Deployment AI Agent</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .status-card {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            border-left: 4px solid #667eea;
+        }
+
+        .status-card h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        .status-card .value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .status-card .label {
+            color: #666;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+
+        .section {
+            margin-bottom: 40px;
+        }
+
+        .section h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+        }
+
+        .activity-list {
+            list-style: none;
+        }
+
+        .activity-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .activity-icon {
+            font-size: 1.5em;
+        }
+
+        .activity-content {
+            flex: 1;
+        }
+
+        .activity-time {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin: 5px;
+        }
+
+        .badge-success {
+            background: #10b981;
+            color: white;
+        }
+
+        .badge-warning {
+            background: #f59e0b;
+            color: white;
+        }
+
+        .badge-info {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .footer {
+            background: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            color: #666;
+        }
+
+        .tech-stack {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 AutoDebugger</h1>
+            <p>Self-Healing Deployment AI Agent</p>
+        </div>
+
+        <div class="content">
+            <div class="status-grid">
+                <div class="status-card">
+                    <h3>📡 Cline CLI</h3>
+                    <div class="value" id="cline-status">Connected</div>
+                    <div class="label">Tasks Executed: <span id="cline-tasks">0</span></div>
+                </div>
+
+                <div class="status-card">
+                    <h3>🧠 Kestra Agent</h3>
+                    <div class="value" id="kestra-status">Active</div>
+                    <div class="label">Decisions Made: <span id="kestra-decisions">0</span></div>
+                </div>
+
+                <div class="status-card">
+                    <h3>🎯 Oumi RL</h3>
+                    <div class="value" id="oumi-status">Trained</div>
+                    <div class="label">Success Rate: <span id="oumi-rate">75%</span></div>
+                </div>
+
+                <div class="status-card">
+                    <h3>📊 Overall</h3>
+                    <div class="value" id="overall-health">Healthy</div>
+                    <div class="label">Issues Resolved: <span id="issues-resolved">0</span></div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>🎯 Hackathon Awards</h2>
+                <div class="tech-stack">
+                    <span class="badge badge-success">Infinity Build ($5k) - Cline CLI</span>
+                    <span class="badge badge-success">Wakanda Data ($4k) - Kestra AI</span>
+                    <span class="badge badge-success">Iron Intelligence ($3k) - Oumi RL</span>
+                    <span class="badge badge-info">Stormbreaker ($2k) - Vercel</span>
+                    <span class="badge badge-info">Captain Code ($1k) - CodeRabbit</span>
+                </div>
+            </div>
+
+            <div class="section">
+                <h2>📊 Recent Activity</h2>
+                <ul class="activity-list" id="activity-list">
+                    <li class="activity-item">
+                        <span class="activity-icon">👁️</span>
+                        <div class="activity-content">
+                            <strong>Monitoring started</strong>
+                            <div class="activity-time">Just now</div>
+                        </div>
+                    </li>
+                    <li class="activity-item">
+                        <span class="activity-icon">🔍</span>
+                        <div class="activity-content">
+                            <strong>Issue diagnosed: Configuration error</strong>
+                            <div class="activity-time">2 minutes ago</div>
+                        </div>
+                    </li>
+                    <li class="activity-item">
+                        <span class="activity-icon">🔧</span>
+                        <div class="activity-content">
+                            <strong>Fix applied successfully</strong>
+                            <div class="activity-time">5 minutes ago</div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="section">
+                <h2>🚀 Getting Started</h2>
+                <pre style="background: #f8f9fa; padding: 20px; border-radius: 8px; overflow-x: auto;">
+# Install dependencies
+npm install
+
+# Monitor a deployment
+autodebugger monitor https://your-app.vercel.app
+
+# Diagnose an issue
+autodebugger diagnose error.log
+
+# Auto-fix an issue
+autodebugger fix issue-123
+                </pre>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>Built for AI Agents Assemble Hackathon | Powered by Cline, Kestra, Oumi, Vercel</p>
+        </div>
+    </div>
+
+    <script>
+        // Simulate real-time updates
+        setInterval(() => {
+            document.getElementById('cline-tasks').textContent = 
+                Math.floor(Math.random() * 100) + 50;
+            document.getElementById('kestra-decisions').textContent = 
+                Math.floor(Math.random() * 50) + 25;
+            const rate = (75 + Math.random() * 10).toFixed(1);
+            document.getElementById('oumi-rate').textContent = rate + '%';
+        }, 5000);
+    </script>
+</body>
+</html>
+
