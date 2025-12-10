@@ -43,4 +43,4 @@ temp/
 models/
 *.pth
 *.pt
-
+.env*.local
