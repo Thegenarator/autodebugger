@@ -18,10 +18,17 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { deploymentUrl, demo = false } = req.body;
+    const { deploymentUrl, demo = false, githubOwner, githubRepo, vercelProjectId } = req.body;
 
-    if (!deploymentUrl) {
-      return res.status(400).json({ error: 'Deployment URL is required' });
+    // Get configuration from request or environment
+    const config = {
+      githubOwner: githubOwner || process.env.GITHUB_OWNER,
+      githubRepo: githubRepo || process.env.GITHUB_REPO,
+      vercelProjectId: vercelProjectId || process.env.VERCEL_PROJECT_ID
+    };
+
+    if (!deploymentUrl && !config.vercelProjectId) {
+      return res.status(400).json({ error: 'Deployment URL or Vercel Project ID is required' });
     }
 
     // Demo mode - return simulated results
@@ -51,8 +58,14 @@ export default async function handler(req, res) {
     // Real mode - use actual AutoDebugger
     const { AutonomousLoop } = await import('../src/core/autonomous-loop.js');
     
+    // Set environment variables for this request
+    if (config.githubOwner) process.env.GITHUB_OWNER = config.githubOwner;
+    if (config.githubRepo) process.env.GITHUB_REPO = config.githubRepo;
+    if (config.vercelProjectId) process.env.VERCEL_PROJECT_ID = config.vercelProjectId;
+    
     const loop = new AutonomousLoop();
-    const result = await loop.execute(deploymentUrl);
+    const targetUrl = deploymentUrl || `https://${config.vercelProjectId}.vercel.app`;
+    const result = await loop.execute(targetUrl);
 
     return res.status(200).json(result);
 

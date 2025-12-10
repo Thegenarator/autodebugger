@@ -18,10 +18,37 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { source, demo = false } = req.body;
+    const { source, demo = false, sourceType = 'manual', workflowRunId, deploymentId } = req.body;
 
-    if (!source) {
-      return res.status(400).json({ error: 'Source (log or error message) is required' });
+    let logData = source;
+
+    // If sourceType is 'github' or 'vercel', fetch real logs
+    if (!demo && process.env.GITHUB_TOKEN && sourceType === 'github' && workflowRunId) {
+      try {
+        const { GitHubIntegration } = await import('../src/automation/github-integration.js');
+        const github = new GitHubIntegration();
+        const workflowData = await github.getWorkflowLogs(workflowRunId);
+        logData = workflowData.logs.map(log => `${log.jobName} (${log.status}):\n${log.logs}`).join('\n\n');
+      } catch (error) {
+        console.error('Failed to fetch GitHub logs:', error);
+        // Fallback to provided source
+      }
+    }
+
+    if (!demo && process.env.VERCEL_TOKEN && sourceType === 'vercel' && deploymentId) {
+      try {
+        const { VercelIntegration } = await import('../src/automation/vercel-integration.js');
+        const vercel = new VercelIntegration();
+        const deploymentData = await vercel.getDeploymentLogs(deploymentId);
+        logData = deploymentData.errorLogs.map(log => log.payload?.text || JSON.stringify(log)).join('\n');
+      } catch (error) {
+        console.error('Failed to fetch Vercel logs:', error);
+        // Fallback to provided source
+      }
+    }
+
+    if (!logData && !source) {
+      return res.status(400).json({ error: 'Source (log or error message) is required, or provide workflowRunId/deploymentId' });
     }
 
     // Demo mode - return simulated results
@@ -52,14 +79,15 @@ export default async function handler(req, res) {
     const clineAutomation = new ClineAutomationAPI();
     const kestraAgent = new KestraAgent();
 
-    // Analyze logs
-    const clineAnalysis = await clineAutomation.analyzeLogs(source);
+    // Analyze logs (use fetched logData or provided source)
+    const logsToAnalyze = logData || source;
+    const clineAnalysis = await clineAutomation.analyzeLogs(logsToAnalyze);
     
     // Summarize with Kestra
     const summary = await kestraAgent.summarizeAndDecide({
-      rawLogs: source,
+      rawLogs: logsToAnalyze,
       clineAnalysis: clineAnalysis,
-      sourceType: 'api'
+      sourceType: sourceType || 'api'
     });
 
     return res.status(200).json(summary);

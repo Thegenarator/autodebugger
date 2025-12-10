@@ -124,6 +124,87 @@ export class VercelIntegration {
   }
 
   /**
+   * Get deployment logs from Vercel
+   */
+  async getDeploymentLogs(deploymentId) {
+    try {
+      const { data } = await axios.get(
+        `${this.baseUrl}/v2/deployments/${deploymentId}/events`,
+        {
+          headers: {
+            Authorization: `Bearer ${this.vercelToken}`
+          },
+          params: this.teamId ? { teamId: this.teamId } : {}
+        }
+      );
+
+      // Filter for error events
+      const errorLogs = data.filter(event => 
+        event.type === 'command' && 
+        (event.payload?.text?.includes('error') || 
+         event.payload?.text?.includes('Error') ||
+         event.payload?.text?.includes('failed') ||
+         event.payload?.text?.includes('Failed'))
+      );
+
+      return {
+        deploymentId,
+        logs: data,
+        errorLogs: errorLogs,
+        totalEvents: data.length
+      };
+    } catch (error) {
+      throw new Error(`Failed to fetch deployment logs: ${error.message}`);
+    }
+  }
+
+  /**
+   * Get latest deployments
+   */
+  async getLatestDeployments(limit = 10) {
+    try {
+      const { data } = await axios.get(
+        `${this.baseUrl}/v6/deployments`,
+        {
+          headers: {
+            Authorization: `Bearer ${this.vercelToken}`
+          },
+          params: {
+            ...(this.teamId && { teamId: this.teamId }),
+            projectId: this.projectId,
+            limit
+          }
+        }
+      );
+
+      return data.deployments.map(deployment => ({
+        id: deployment.uid,
+        url: deployment.url,
+        state: deployment.readyState,
+        createdAt: deployment.createdAt,
+        buildingAt: deployment.buildingAt,
+        readyAt: deployment.readyAt
+      }));
+    } catch (error) {
+      throw new Error(`Failed to fetch deployments: ${error.message}`);
+    }
+  }
+
+  /**
+   * Get failed deployments
+   */
+  async getFailedDeployments(limit = 5) {
+    try {
+      const deployments = await this.getLatestDeployments(limit * 2);
+      return deployments
+        .filter(d => d.state === 'ERROR' || d.state === 'CANCELED')
+        .slice(0, limit);
+    } catch (error) {
+      throw new Error(`Failed to fetch failed deployments: ${error.message}`);
+    }
+  }
+
+  /**
    * Wait helper
    */
   _wait(ms) {

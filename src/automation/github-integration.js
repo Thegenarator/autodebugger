@@ -254,5 +254,105 @@ This PR will be automatically reviewed by CodeRabbit for:
     }
     return currentContent + '\n' + `// ${change.description}`;
   }
+
+  /**
+   * Fetch workflow run logs from GitHub Actions
+   */
+  async getWorkflowLogs(runId) {
+    try {
+      // Get workflow run details
+      const { data: runData } = await axios.get(
+        `${this.baseUrl}/repos/${this.owner}/${this.repo}/actions/runs/${runId}`,
+        {
+          headers: {
+            Authorization: `token ${this.githubToken}`,
+            Accept: 'application/vnd.github.v3+json'
+          }
+        }
+      );
+
+      // Get job logs
+      const { data: jobsData } = await axios.get(
+        `${this.baseUrl}/repos/${this.owner}/${this.repo}/actions/runs/${runId}/jobs`,
+        {
+          headers: {
+            Authorization: `token ${this.githubToken}`,
+            Accept: 'application/vnd.github.v3+json'
+          }
+        }
+      );
+
+      // Fetch logs for each job
+      const logs = [];
+      for (const job of jobsData.jobs || []) {
+        try {
+          const { data: logData } = await axios.get(
+            `${this.baseUrl}/repos/${this.owner}/${this.repo}/actions/jobs/${job.id}/logs`,
+            {
+              headers: {
+                Authorization: `token ${this.githubToken}`,
+                Accept: 'application/vnd.github.v3+json'
+              },
+              responseType: 'text'
+            }
+          );
+          logs.push({
+            jobName: job.name,
+            status: job.conclusion,
+            logs: logData
+          });
+        } catch (error) {
+          // Log might not be available yet
+          logs.push({
+            jobName: job.name,
+            status: job.conclusion,
+            logs: `Logs not available: ${error.message}`
+          });
+        }
+      }
+
+      return {
+        runId,
+        status: runData.conclusion,
+        workflow: runData.name || runData.workflow_id,
+        logs: logs,
+        createdAt: runData.created_at,
+        updatedAt: runData.updated_at
+      };
+    } catch (error) {
+      throw new Error(`Failed to fetch workflow logs: ${error.message}`);
+    }
+  }
+
+  /**
+   * Get latest failed workflow runs
+   */
+  async getFailedWorkflows(limit = 5) {
+    try {
+      const { data } = await axios.get(
+        `${this.baseUrl}/repos/${this.owner}/${this.repo}/actions/runs`,
+        {
+          headers: {
+            Authorization: `token ${this.githubToken}`,
+            Accept: 'application/vnd.github.v3+json'
+          },
+          params: {
+            status: 'failure',
+            per_page: limit
+          }
+        }
+      );
+
+      return data.workflow_runs.map(run => ({
+        id: run.id,
+        name: run.name,
+        conclusion: run.conclusion,
+        createdAt: run.created_at,
+        htmlUrl: run.html_url
+      }));
+    } catch (error) {
+      throw new Error(`Failed to fetch failed workflows: ${error.message}`);
+    }
+  }
 }
 

@@ -306,6 +306,62 @@
                 </div>
             </div>
 
+            <!-- Configuration Section -->
+            <div class="section try-it-section" id="config-section">
+                <h2>⚙️ Configuration</h2>
+                <p style="margin-bottom: 20px; color: #666;">
+                    Configure your GitHub repository and Vercel deployment to enable real-time monitoring and automatic recovery.
+                </p>
+
+                <form id="config-form">
+                    <div class="form-group">
+                        <label for="github-owner">GitHub Owner/Username:</label>
+                        <input 
+                            type="text" 
+                            id="github-owner" 
+                            placeholder="your-username or your-org"
+                        />
+                    </div>
+                    <div class="form-group">
+                        <label for="github-repo">GitHub Repository:</label>
+                        <input 
+                            type="text" 
+                            id="github-repo" 
+                            placeholder="your-repo-name"
+                        />
+                    </div>
+                    <div class="form-group">
+                        <label for="vercel-project-id">Vercel Project ID:</label>
+                        <input 
+                            type="text" 
+                            id="vercel-project-id" 
+                            placeholder="prj_xxxxxxxxxxxxx"
+                        />
+                    </div>
+                    <div class="form-group">
+                        <label for="vercel-team-id">Vercel Team ID (optional):</label>
+                        <input 
+                            type="text" 
+                            id="vercel-team-id" 
+                            placeholder="team_xxxxxxxxxxxxx"
+                        />
+                    </div>
+                    <div class="form-group">
+                        <label for="deployment-url">Deployment URL:</label>
+                        <input 
+                            type="url" 
+                            id="deployment-url-config" 
+                            placeholder="https://your-app.vercel.app"
+                        />
+                    </div>
+                    <button type="submit" class="btn" id="save-config-btn">
+                        💾 Save Configuration
+                    </button>
+                </form>
+
+                <div id="config-result" class="result-box"></div>
+            </div>
+
             <!-- Try It Now Section -->
             <div class="section try-it-section">
                 <h2>🚀 Try AutoDebugger Now</h2>
@@ -608,8 +664,136 @@ Deployment timeout after 300s"
             resultBox.classList.add('show');
         }
 
-        // Load status on page load
+        // Configuration form
+        let currentConfig = null;
+
+        async function loadConfig() {
+            try {
+                const response = await fetch(`${API_BASE}/api/config`);
+                const data = await response.json();
+                currentConfig = data.config;
+                
+                if (currentConfig.githubOwner) {
+                    document.getElementById('github-owner').value = currentConfig.githubOwner;
+                }
+                if (currentConfig.githubRepo) {
+                    document.getElementById('github-repo').value = currentConfig.githubRepo;
+                }
+                if (currentConfig.vercelProjectId) {
+                    document.getElementById('vercel-project-id').value = currentConfig.vercelProjectId;
+                }
+                if (currentConfig.vercelTeamId) {
+                    document.getElementById('vercel-team-id').value = currentConfig.vercelTeamId;
+                }
+                if (currentConfig.deploymentUrl) {
+                    document.getElementById('deployment-url-config').value = currentConfig.deploymentUrl;
+                    document.getElementById('deployment-url').value = currentConfig.deploymentUrl;
+                }
+            } catch (error) {
+                console.error('Failed to load config:', error);
+            }
+        }
+
+        document.getElementById('config-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('save-config-btn');
+            const resultBox = document.getElementById('config-result');
+            btn.disabled = true;
+            btn.innerHTML = 'Saving... <span class="loading"></span>';
+            resultBox.style.display = 'none';
+
+            try {
+                const config = {
+                    githubOwner: document.getElementById('github-owner').value,
+                    githubRepo: document.getElementById('github-repo').value,
+                    vercelProjectId: document.getElementById('vercel-project-id').value,
+                    vercelTeamId: document.getElementById('vercel-team-id').value,
+                    deploymentUrl: document.getElementById('deployment-url-config').value
+                };
+
+                const response = await fetch(`${API_BASE}/api/config`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(config)
+                });
+
+                const data = await response.json();
+                currentConfig = data.config;
+
+                resultBox.innerHTML = `
+                    <h3>✅ Configuration Saved</h3>
+                    <div class="result-item">
+                        <strong>GitHub:</strong> ${config.githubOwner}/${config.githubRepo || 'Not set'}
+                    </div>
+                    <div class="result-item">
+                        <strong>Vercel Project:</strong> ${config.vercelProjectId || 'Not set'}
+                    </div>
+                    <div class="result-item">
+                        <strong>Deployment URL:</strong> ${config.deploymentUrl || 'Not set'}
+                    </div>
+                    <p style="margin-top: 15px; color: #10b981;">
+                        ✅ AutoDebugger will now monitor this repository and deployment!
+                    </p>
+                `;
+                resultBox.classList.add('show');
+
+                // Update deployment URL in autonomous form
+                if (config.deploymentUrl) {
+                    document.getElementById('deployment-url').value = config.deploymentUrl;
+                }
+            } catch (error) {
+                resultBox.innerHTML = `<h3>❌ Error</h3><p>${error.message}</p>`;
+                resultBox.classList.add('show');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '💾 Save Configuration';
+            }
+        });
+
+        // Update diagnose form to use real logs if configured
+        async function fetchRealLogs() {
+            if (!currentConfig || (!currentConfig.githubRepo && !currentConfig.vercelProjectId)) {
+                return null;
+            }
+
+            try {
+                const params = new URLSearchParams();
+                if (currentConfig.githubOwner && currentConfig.githubRepo) {
+                    params.append('githubOwner', currentConfig.githubOwner);
+                    params.append('githubRepo', currentConfig.githubRepo);
+                }
+                if (currentConfig.vercelProjectId) {
+                    params.append('vercelProjectId', currentConfig.vercelProjectId);
+                }
+
+                const response = await fetch(`${API_BASE}/api/logs?${params}`);
+                const data = await response.json();
+
+                if (data.github?.failedWorkflows?.length > 0) {
+                    return {
+                        source: 'github',
+                        workflows: data.github.failedWorkflows,
+                        message: `Found ${data.github.failedWorkflows.length} failed workflow(s)`
+                    };
+                }
+
+                if (data.vercel?.failedDeployments?.length > 0) {
+                    return {
+                        source: 'vercel',
+                        deployments: data.vercel.failedDeployments,
+                        message: `Found ${data.vercel.failedDeployments.length} failed deployment(s)`
+                    };
+                }
+            } catch (error) {
+                console.error('Failed to fetch real logs:', error);
+            }
+
+            return null;
+        }
+
+        // Load status and config on page load
         loadStatus();
+        loadConfig();
         setInterval(loadStatus, 30000); // Refresh every 30 seconds
     </script>
 </body>
