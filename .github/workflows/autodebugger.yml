@@ -1,0 +1,110 @@
+name: AutoDebugger - Self-Healing Deployment Agent
+
+on:
+  # Trigger on deployment failures
+  deployment_status:
+    types: [failure]
+  # Trigger on workflow failures
+  workflow_run:
+    workflows: ["Deploy", "Build", "CI"]
+    types:
+      - completed
+  # Manual trigger
+  workflow_dispatch:
+    inputs:
+      deployment_url:
+        description: 'Deployment URL to monitor'
+        required: true
+        type: string
+      issue_description:
+        description: 'Issue description or log file path'
+        required: false
+        type: string
+
+jobs:
+  autodebugger:
+    name: 🤖 AutoDebugger Autonomous Recovery
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 📥 Install Dependencies
+        run: |
+          npm install
+
+      - name: 🔧 Configure AutoDebugger
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_TEAM_ID: ${{ secrets.VERCEL_TEAM_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          GITHUB_OWNER: ${{ github.repository_owner }}
+          GITHUB_REPO: ${{ github.event.repository.name }}
+        run: |
+          echo "AutoDebugger configured with secrets"
+
+      - name: 🔍 Detect and Diagnose Issues
+        id: diagnose
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_OWNER: ${{ github.repository_owner }}
+          GITHUB_REPO: ${{ github.event.repository.name }}
+        run: |
+          # Get deployment URL from event or input
+          DEPLOYMENT_URL="${{ github.event.deployment_status?.target_url || github.event.inputs.deployment_url || 'https://'${{ github.event.repository.name }}'.vercel.app' }}"
+          
+          # Get error logs from failed workflow
+          if [ "${{ github.event_name }}" == "workflow_run" ]; then
+            echo "Fetching logs from failed workflow..."
+            # Extract logs from failed workflow
+            ERROR_LOGS=$(gh run view ${{ github.event.workflow_run.id }} --log 2>&1 || echo "Workflow failed")
+          else
+            ERROR_LOGS="${{ github.event.inputs.issue_description || 'Deployment failure detected' }}"
+          fi
+          
+          # Run diagnosis
+          node src/index.js diagnose "$ERROR_LOGS" --output json > diagnosis.json || echo '{"issueId":"auto-issue","summary":"Deployment failure"}' > diagnosis.json
+          
+          # Extract issue ID
+          ISSUE_ID=$(cat diagnosis.json | grep -o '"issueId":"[^"]*"' | cut -d'"' -f4 || echo "auto-issue-$(date +%s)")
+          echo "issue_id=$ISSUE_ID" >> $GITHUB_OUTPUT
+
+      - name: 🤖 Execute Autonomous Recovery Loop
+        if: steps.diagnose.outputs.issue_id != ''
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_TEAM_ID: ${{ secrets.VERCEL_TEAM_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          GITHUB_OWNER: ${{ github.repository_owner }}
+          GITHUB_REPO: ${{ github.event.repository.name }}
+        run: |
+          DEPLOYMENT_URL="${{ github.event.deployment_status?.target_url || github.event.inputs.deployment_url || 'https://'${{ github.event.repository.name }}'.vercel.app' }}"
+          
+          # Run full autonomous loop
+          node src/index.js autonomous "$DEPLOYMENT_URL" || echo "Autonomous recovery completed with status: $?"
+
+      - name: 📝 Create Summary
+        if: always()
+        run: |
+          echo "## 🤖 AutoDebugger Recovery Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Issue ID:** ${{ steps.diagnose.outputs.issue_id }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Status:** Recovery attempt completed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Check the logs above for detailed recovery steps." >> $GITHUB_STEP_SUMMARY
+
