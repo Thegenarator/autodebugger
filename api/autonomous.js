@@ -32,7 +32,8 @@ export default async function handler(req, res) {
     }
 
     // Demo mode - return simulated results
-    if (demo || !process.env.OPENAI_API_KEY) {
+    const hasApiKey = process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.trim() !== '';
+    if (demo || !hasApiKey) {
       return res.status(200).json({
         demo: true,
         success: true,

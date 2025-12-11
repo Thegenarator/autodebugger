@@ -12,12 +12,25 @@ export async function autonomousCommand(deploymentUrl, options = {}) {
   
   // Check if we should force/demo mode
   const force = options.force || false;
-  const demo = options.demo || !process.env.OPENAI_API_KEY; // Auto-enable demo if no API key
+  const hasApiKey = process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.trim() !== '';
+  const demo = options.demo || (!hasApiKey && !force); // Only auto-enable demo if no API key AND not forcing
   
-  if (demo) {
-    console.log(chalk.yellow('📝 Running in DEMO mode (no API key detected)\n'));
+  // Debug info
+  if (process.env.DEBUG) {
+    console.log(chalk.gray(`DEBUG: OPENAI_API_KEY present: ${hasApiKey ? 'YES' : 'NO'}`));
+    console.log(chalk.gray(`DEBUG: Force mode: ${force}`));
+    console.log(chalk.gray(`DEBUG: Demo mode: ${demo}\n`));
+  }
+  
+  if (options.demo) {
+    console.log(chalk.yellow('📝 Running in DEMO mode (--demo flag set)\n'));
+  } else if (!hasApiKey && !force) {
+    console.log(chalk.yellow('📝 Running in DEMO mode (no OPENAI_API_KEY found in environment)\n'));
+    console.log(chalk.gray('   Tip: Add OPENAI_API_KEY to .env file or use --force to run anyway\n'));
   } else if (force) {
     console.log(chalk.yellow('⚡ Running in FORCE mode - will execute full loop regardless of deployment status\n'));
+  } else {
+    console.log(chalk.green('🔑 API key detected - running in REAL mode\n'));
   }
   
   const loop = new AutonomousLoop();
