@@ -174,11 +174,17 @@
             border-radius: 12px;
             padding: 20px;
             margin-top: 20px;
-            display: none;
+            display: none !important;
+            min-height: 100px;
+            border: 2px solid #e0e0e0;
         }
 
         .result-box.show {
-            display: block;
+            display: block !important;
+        }
+        
+        .result-box[style*="display: block"] {
+            display: block !important;
         }
 
         .result-box h3 {
@@ -523,22 +529,26 @@ Deployment timeout after 300s"
             resultBox.classList.add('show');
 
             try {
+                console.log('Submitting diagnose request with:', errorInput);
                 const response = await fetch(`${API_BASE}/api/diagnose`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ source: errorInput, demo: false })
+                    body: JSON.stringify({ source: errorInput, demo: true }) // Use demo mode for now
                 });
 
+                console.log('Response received:', response.status, response.statusText);
                 if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('API error response:', errorText);
                     throw new Error(`API error: ${response.status} ${response.statusText}`);
                 }
 
                 const data = await response.json();
-                console.log('Diagnose result:', data);
+                console.log('Diagnose result data:', data);
                 displayDiagnoseResult(data);
             } catch (error) {
                 console.error('Diagnose error:', error);
-                resultBox.innerHTML = `<h3>❌ Error</h3><p>${error.message}</p>`;
+                resultBox.innerHTML = `<h3>❌ Error</h3><p>${error.message}</p><p style="font-size: 0.9em; color: #666; margin-top: 10px;">Check browser console (F12) for details.</p>`;
                 resultBox.style.display = 'block';
                 resultBox.classList.add('show');
             } finally {
@@ -645,7 +655,13 @@ Deployment timeout after 300s"
             resultBox.innerHTML = html;
             resultBox.style.display = 'block';
             resultBox.classList.add('show');
-            console.log('Diagnose result displayed in:', resultBox);
+            console.log('Diagnose result displayed successfully');
+            console.log('Result box element:', resultBox);
+            console.log('Result box display style:', resultBox.style.display);
+            console.log('Result box classes:', resultBox.className);
+            
+            // Force scroll to result box
+            resultBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
 
             // Autonomous form
@@ -666,28 +682,36 @@ Deployment timeout after 300s"
             resultBox.style.display = 'none';
 
             try {
+                console.log('Submitting autonomous request with URL:', url);
+                resultBox.style.display = 'block';
+                resultBox.innerHTML = '<p style="text-align: center; padding: 20px;"><span class="loading"></span> Running autonomous recovery...</p>';
+                resultBox.classList.add('show');
+                
                 const response = await fetch(`${API_BASE}/api/autonomous`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ deploymentUrl: url, demo: false })
+                    body: JSON.stringify({ deploymentUrl: url, demo: true }) // Use demo mode for now
                 });
 
+                console.log('Response received:', response.status, response.statusText);
                 if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('API error response:', errorText);
                     throw new Error(`API error: ${response.status} ${response.statusText}`);
                 }
 
                 const data = await response.json();
-                console.log('Autonomous result:', data);
+                console.log('Autonomous result data:', data);
                 displayAutonomousResult(data);
             } catch (error) {
                 console.error('Autonomous error:', error);
-                resultBox.innerHTML = `<h3>❌ Error</h3><p>${error.message}</p>`;
+                resultBox.innerHTML = `<h3>❌ Error</h3><p>${error.message}</p><p style="font-size: 0.9em; color: #666; margin-top: 10px;">Check browser console (F12) for details.</p>`;
                 resultBox.style.display = 'block';
                 resultBox.classList.add('show');
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = '🤖 Run Autonomous Recovery';
-                }
+            }
                 });
             } else {
                 console.error('autonomous-form not found!');
@@ -716,6 +740,10 @@ Deployment timeout after 300s"
 
                     try {
                         console.log('Fetching from:', `${API_BASE}/api/autonomous`);
+                        resultBox.style.display = 'block';
+                        resultBox.innerHTML = '<p style="text-align: center; padding: 20px;"><span class="loading"></span> Running demo autonomous recovery...</p>';
+                        resultBox.classList.add('show');
+                        
                         const response = await fetch(`${API_BASE}/api/autonomous`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
@@ -727,6 +755,8 @@ Deployment timeout after 300s"
 
                         console.log('Response status:', response.status);
                         if (!response.ok) {
+                            const errorText = await response.text();
+                            console.error('API error response:', errorText);
                             throw new Error(`API error: ${response.status} ${response.statusText}`);
                         }
 
@@ -865,7 +895,13 @@ Deployment timeout after 300s"
             resultBox.innerHTML = html;
             resultBox.style.display = 'block';
             resultBox.classList.add('show');
-            console.log('Autonomous result box displayed:', resultBox);
+            console.log('Autonomous result displayed successfully');
+            console.log('Result box element:', resultBox);
+            console.log('Result box display style:', resultBox.style.display);
+            console.log('Result box classes:', resultBox.className);
+            
+            // Force scroll to result box
+            resultBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
 
         // Configuration form
