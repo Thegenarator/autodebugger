@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import ora from 'ora';
 // Windows-compatible: Use API version (can switch to CLI if installed)
-import { ClineAutomationAPI as ClineAutomation } from '../automation/cline-automation-api.js';
+import { ClineAutomation } from '../automation/cline-automation-loader.js';
 import { KestraAgent } from '../agents/kestra-agent.js';
 import fs from 'fs/promises';
 

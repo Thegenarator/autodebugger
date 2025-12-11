@@ -17,11 +17,7 @@
 
 import chalk from 'chalk';
 // Import Cline - will use API version if CLI not available (Windows compatible)
-import { ClineAutomation as ClineCLI } from '../automation/cline-automation.js';
-import { ClineAutomationAPI } from '../automation/cline-automation-api.js';
-
-// Use API version by default (Windows compatible) - can switch to CLI version if installed
-const ClineAutomation = ClineAutomationAPI; // Change to ClineCLI if CLI is installed
+import { ClineAutomation } from '../automation/cline-automation-loader.js';
 import { KestraAgent } from '../agents/kestra-agent.js';
 import { OumiAgent } from '../agents/oumi-agent.js';
 import { GitHubIntegration } from '../automation/github-integration.js';
@@ -83,6 +79,16 @@ export class AutonomousLoop {
         strategy: rlStrategy
       });
       console.log(chalk.green(`✓ Fix plan generated (${fixPlan.changes.length} change(s))`));
+
+      // If no actionable changes, stop before creating a PR
+      if (!fixPlan.changes || fixPlan.changes.length === 0) {
+        console.log(chalk.yellow('\n⚠ No actionable changes generated; skipping PR creation.'));
+        return {
+          success: false,
+          action: 'no-op',
+          message: 'No actionable changes generated; no PR created.'
+        };
+      }
 
       // Step 5: Create PR with fixes
       console.log(chalk.cyan('\n[5/8] 📝 Creating pull request...'));

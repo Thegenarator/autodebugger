@@ -1,13 +1,11 @@
 #!/usr/bin/env node
-import 'dotenv/config';
 
 /**
  * AutoDebugger - Main Entry Point
- * ...
-
  * A Self-Healing Deployment AI Agent
  */
 
+import 'dotenv/config'; // load environment variables from .env
 import { program } from 'commander';
 import chalk from 'chalk';
 import { monitorCommand } from './cli/monitor.js';

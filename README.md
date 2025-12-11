@@ -59,21 +59,70 @@ AutoDebugger is a self-healing deployment AI agent that creates a **complete aut
 
 ## 🚀 Quick Start
 
+### Option 1: Use as GitHub Action (Recommended for Teams)
+
+Add AutoDebugger to your repository to automatically fix deployment failures:
+
+1. **Copy the workflow file** to your repo:
+   ```bash
+   mkdir -p .github/workflows
+   curl -o .github/workflows/autodebugger.yml https://raw.githubusercontent.com/Thegenarator/autodebugger/main/.github/workflows/autodebugger.yml
+   ```
+
+2. **Add required secrets** to your GitHub repository:
+   - Go to `Settings` → `Secrets and variables` → `Actions`
+   - Add these secrets:
+     - `OPENAI_API_KEY` - Your OpenAI API key
+     - `GITHUB_TOKEN` - Auto-generated (already available)
+     - `VERCEL_TOKEN` - (Optional) For Vercel deployments
+     - `VERCEL_TEAM_ID` - (Optional) Your Vercel team ID
+     - `VERCEL_PROJECT_ID` - (Optional) Your Vercel project ID
+
+3. **AutoDebugger will automatically run** when:
+   - A deployment fails
+   - A workflow run fails
+   - You manually trigger it from Actions tab
+
+### Option 2: Install as CLI Tool
+
 ```bash
+# Clone the repository
+git clone https://github.com/Thegenarator/autodebugger.git
+cd autodebugger
+
 # Install dependencies
 npm install
 
 # Set up environment variables
 cp .env.example .env
-# Edit .env with your API keys
+# Edit .env with your API keys:
+# - OPENAI_API_KEY
+# - GITHUB_TOKEN
+# - GITHUB_OWNER
+# - GITHUB_REPO
+# - VERCEL_TOKEN (optional)
 
 # Run the autonomous agent
-autodebugger autonomous https://your-app.vercel.app
+npm run cli -- autonomous https://your-app.vercel.app
 
 # Or use individual commands
-autodebugger monitor https://your-app.vercel.app
-autodebugger diagnose error.log
-autodebugger fix issue-123 --create-pr --redeploy
+npm run cli -- monitor https://your-app.vercel.app
+npm run cli -- diagnose error.log
+npm run cli -- diagnose "Build failed: exit code 1"
+npm run cli -- fix issue-123 --create-pr --redeploy
+```
+
+### Option 3: Use in Your Own GitHub Actions Workflow
+
+Add this step to your existing workflow:
+
+```yaml
+- name: 🤖 AutoDebugger Recovery
+  uses: Thegenarator/autodebugger@main
+  with:
+    deployment_url: ${{ steps.deploy.outputs.url }}
+    openai_api_key: ${{ secrets.OPENAI_API_KEY }}
+  if: failure() # Only run on failure
 ```
 
 ## 📋 Features
@@ -89,6 +138,53 @@ autodebugger fix issue-123 --create-pr --redeploy
 ## 📝 Development Plan
 
 See [DEVELOPMENT_PLAN.md](./DEVELOPMENT_PLAN.md) for detailed implementation roadmap.
+
+## 📖 How It Works for Other Users
+
+### For Repository Owners
+
+1. **Add AutoDebugger workflow** to your `.github/workflows/` directory
+2. **Configure secrets** in your GitHub repo settings
+3. **That's it!** AutoDebugger will:
+   - Monitor your deployments automatically
+   - Detect failures and diagnose issues
+   - Generate fixes using AI
+   - Create pull requests with fixes
+   - Wait for CodeRabbit review
+   - Redeploy automatically
+
+### For Developers
+
+When AutoDebugger detects an issue:
+
+1. **You'll see a PR** created automatically with the fix
+2. **CodeRabbit reviews** the changes (if enabled)
+3. **You can review** the AI-generated fix
+4. **Merge when ready** - AutoDebugger handles the rest!
+
+### Example Workflow
+
+```
+Deployment fails → AutoDebugger detects → Analyzes logs → 
+Generates fix → Opens PR → CodeRabbit reviews → 
+You merge → Auto-redeploys → Verifies health ✅
+```
+
+## 🔧 Configuration
+
+### Required Environment Variables
+
+- `OPENAI_API_KEY` - OpenAI API key for AI analysis
+- `GITHUB_TOKEN` - GitHub token (auto-provided in Actions)
+- `GITHUB_OWNER` - Your GitHub username/org
+- `GITHUB_REPO` - Repository name
+
+### Optional Variables
+
+- `VERCEL_TOKEN` - For Vercel deployments
+- `VERCEL_TEAM_ID` - Vercel team ID
+- `VERCEL_PROJECT_ID` - Vercel project ID
+- `CLINE_MODEL` - AI model to use (default: gpt-4)
 
 ## 🤝 Contributing
 
