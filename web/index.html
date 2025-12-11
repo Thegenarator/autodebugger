@@ -388,7 +388,11 @@ Deployment timeout after 300s"
                     </button>
                 </form>
 
-                <div id="diagnose-result" class="result-box"></div>
+                <div id="diagnose-result" class="result-box" style="display: none;">
+                    <p style="color: #666; font-style: italic; text-align: center; padding: 20px;">
+                        Results will appear here after diagnosis...
+                    </p>
+                </div>
             </div>
 
             <!-- Autonomous Recovery -->
@@ -415,7 +419,11 @@ Deployment timeout after 300s"
                     </button>
                 </form>
 
-                <div id="autonomous-result" class="result-box"></div>
+                <div id="autonomous-result" class="result-box" style="display: none;">
+                    <p style="color: #666; font-style: italic; text-align: center; padding: 20px;">
+                        Results will appear here after autonomous recovery...
+                    </p>
+                </div>
             </div>
 
             <!-- Awards Section -->
@@ -503,9 +511,16 @@ Deployment timeout after 300s"
 
             const btn = document.getElementById('diagnose-btn');
             const resultBox = document.getElementById('diagnose-result');
+            if (!resultBox) {
+                console.error('diagnose-result box not found!');
+                alert('Error: Result display area not found. Please refresh the page.');
+                return;
+            }
             btn.disabled = true;
             btn.innerHTML = 'Analyzing... <span class="loading"></span>';
-            resultBox.style.display = 'none';
+            resultBox.style.display = 'block';
+            resultBox.innerHTML = '<p style="text-align: center; padding: 20px;"><span class="loading"></span> Analyzing error logs...</p>';
+            resultBox.classList.add('show');
 
             try {
                 const response = await fetch(`${API_BASE}/api/diagnose`, {
@@ -615,7 +630,9 @@ Deployment timeout after 300s"
             `;
 
             resultBox.innerHTML = html;
+            resultBox.style.display = 'block';
             resultBox.classList.add('show');
+            console.log('Diagnose result displayed in:', resultBox);
         }
 
             // Autonomous form
