@@ -62,6 +62,8 @@ program
   .description('Execute complete autonomous recovery loop (Detect → Fix → PR → Deploy)')
   .argument('<url>', 'Deployment URL to monitor and fix')
   .option('--auto-merge', 'Automatically merge PR after CodeRabbit review')
+  .option('--force', 'Force execution even if deployment appears healthy (for testing)')
+  .option('--demo', 'Run in demo mode with simulated failures (shows full loop)')
   .action(autonomousCommand);
 
 program.parse();

@@ -36,18 +36,49 @@ export class AutonomousLoop {
    * Execute the complete autonomous loop
    * This is what makes your project a winner!
    */
-  async execute(deploymentUrl) {
+  async execute(deploymentUrl, options = {}) {
+    const { force = false, demo = false } = options;
+    
     console.log(chalk.bold.blue('\n🔄 Starting Autonomous Deployment Recovery Loop\n'));
     console.log(chalk.gray('─'.repeat(60)));
+    
+    if (demo || force) {
+      console.log(chalk.yellow(`⚠️  Running in ${demo ? 'DEMO' : 'FORCE'} mode - will execute full loop regardless of deployment status\n`));
+    }
 
     try {
       // Step 1: Detect deployment failure
       console.log(chalk.cyan('\n[1/8] 🔍 Detecting deployment failure...'));
       const deploymentStatus = await this.cline.checkDeployment(deploymentUrl);
       
-      if (deploymentStatus.healthy) {
+      if (deploymentStatus.healthy && !force && !demo) {
         console.log(chalk.green('✓ Deployment is healthy - no action needed'));
+        console.log(chalk.yellow('\n💡 Tip: Use --force or --demo flag to run the full autonomous loop anyway'));
         return { success: true, action: 'none' };
+      }
+      
+      // In demo/force mode, simulate a failure scenario
+      if ((force || demo) && deploymentStatus.healthy) {
+        console.log(chalk.yellow('⚠️  Deployment appears healthy, but running full loop in demo mode...'));
+        console.log(chalk.gray('   Simulating a common deployment issue for demonstration'));
+        
+        // Create a simulated failure scenario
+        deploymentStatus.healthy = false;
+        deploymentStatus.errors = [
+          {
+            type: 'build_error',
+            message: 'Module not found: ./components/Button',
+            file: 'src/App.js',
+            line: 15
+          },
+          {
+            type: 'runtime_error',
+            message: 'TypeError: Cannot read property of undefined',
+            file: 'src/utils/helpers.js',
+            line: 42
+          }
+        ];
+        deploymentStatus.logs = 'Build failed: exit code 1\nError: Module not found\nDeployment timeout after 300s';
       }
       
       console.log(chalk.red(`✗ Deployment failure detected!`));
