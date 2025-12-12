@@ -1,0 +1,5 @@
+[33m90d8d8e[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m Fix dashboard: Move all form handlers inside initializeForms(), fix API key detection in status API, improve error handling
+[33m75c0347[m Fix demo mode detection: Properly check for API keys, add VERCEL_SETUP.md guide, improve environment variable detection
+[33m41019e1[m Fix autonomous command to properly handle force and demo modes
+[33m004618d[m Complete autonomous loop: Add --force and --demo flags to run full loop even when deployment is healthy. Auto-enable demo mode when no API key. Simulate failures for demonstration.
+[33m820a160[m Fix GitHub workflow syntax errors: Remove optional chaining, use proper bash conditionals. Add CLI_USAGE.md guide
