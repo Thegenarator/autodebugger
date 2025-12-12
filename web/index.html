@@ -533,7 +533,7 @@ Deployment timeout after 300s"
                 const response = await fetch(`${API_BASE}/api/diagnose`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ source: errorInput, demo: true }) // Use demo mode for now
+                    body: JSON.stringify({ source: errorInput, demo: false }) // Use real mode if API keys are set
                 });
 
                 console.log('Response received:', response.status, response.statusText);
@@ -611,107 +611,58 @@ Deployment timeout after 300s"
             } else {
                 console.error('demo-btn not found!');
             }
-        }
-
-        function displayDiagnoseResult(data) {
-            const resultBox = document.getElementById('diagnose-result');
-            if (!resultBox) {
-                console.error('diagnose-result element not found!');
-                return;
-            }
-            
-            let html = `<h3>${data.demo ? '🎯 Demo Mode Result' : '✅ Diagnosis Result'}</h3>`;
-            
-            if (data.demo) {
-                html += '<p><span class="badge badge-demo">DEMO MODE</span></p>';
-            }
-
-            html += `
-                <div class="result-item">
-                    <strong>Issue ID:</strong> ${data.issueId}
-                </div>
-                <div class="result-item">
-                    <strong>Severity:</strong> ${data.severity}
-                </div>
-                <div class="result-item">
-                    <strong>Summary:</strong> ${data.summary}
-                </div>
-                <div class="result-item">
-                    <strong>Root Cause:</strong> ${data.rootCause}
-                </div>
-                <div class="result-item">
-                    <strong>Suggested Fixes:</strong>
-                    <ul style="margin-top: 10px; margin-left: 20px;">
-                        ${data.suggestedFixes.map(fix => 
-                            `<li>${fix.description} (Confidence: ${(fix.confidence * 100).toFixed(0)}%)</li>`
-                        ).join('')}
-                    </ul>
-                </div>
-                <div class="result-item">
-                    <strong>Auto-fix Recommended:</strong> ${data.canAutoFix ? '✅ Yes' : '❌ No'}
-                </div>
-            `;
-
-            resultBox.innerHTML = html;
-            resultBox.style.display = 'block';
-            resultBox.classList.add('show');
-            console.log('Diagnose result displayed successfully');
-            console.log('Result box element:', resultBox);
-            console.log('Result box display style:', resultBox.style.display);
-            console.log('Result box classes:', resultBox.className);
-            
-            // Force scroll to result box
-            resultBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        }
 
             // Autonomous form
             const autonomousForm = document.getElementById('autonomous-form');
             if (autonomousForm) {
                 autonomousForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const url = document.getElementById('deployment-url').value;
-            if (!url.trim()) {
-                alert('Please enter a deployment URL');
-                return;
-            }
+                    e.preventDefault();
+                    const url = document.getElementById('deployment-url').value;
+                    if (!url.trim()) {
+                        alert('Please enter a deployment URL');
+                        return;
+                    }
 
-            const btn = document.getElementById('autonomous-btn');
-            const resultBox = document.getElementById('autonomous-result');
-            btn.disabled = true;
-            btn.innerHTML = 'Running Recovery... <span class="loading"></span>';
-            resultBox.style.display = 'none';
+                    const btn = document.getElementById('autonomous-btn');
+                    const resultBox = document.getElementById('autonomous-result');
+                    if (!resultBox) {
+                        console.error('autonomous-result box not found!');
+                        alert('Error: Result display area not found. Please refresh the page.');
+                        return;
+                    }
+                    btn.disabled = true;
+                    btn.innerHTML = 'Running Recovery... <span class="loading"></span>';
+                    resultBox.style.display = 'block';
+                    resultBox.innerHTML = '<p style="text-align: center; padding: 20px;"><span class="loading"></span> Running autonomous recovery...</p>';
+                    resultBox.classList.add('show');
 
-            try {
-                console.log('Submitting autonomous request with URL:', url);
-                resultBox.style.display = 'block';
-                resultBox.innerHTML = '<p style="text-align: center; padding: 20px;"><span class="loading"></span> Running autonomous recovery...</p>';
-                resultBox.classList.add('show');
-                
-                const response = await fetch(`${API_BASE}/api/autonomous`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ deploymentUrl: url, demo: true }) // Use demo mode for now
-                });
+                    try {
+                        console.log('Submitting autonomous request with URL:', url);
+                        const response = await fetch(`${API_BASE}/api/autonomous`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ deploymentUrl: url, demo: false }) // Use real mode if API keys are set
+                        });
 
-                console.log('Response received:', response.status, response.statusText);
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    console.error('API error response:', errorText);
-                    throw new Error(`API error: ${response.status} ${response.statusText}`);
-                }
+                        console.log('Response received:', response.status, response.statusText);
+                        if (!response.ok) {
+                            const errorText = await response.text();
+                            console.error('API error response:', errorText);
+                            throw new Error(`API error: ${response.status} ${response.statusText}`);
+                        }
 
-                const data = await response.json();
-                console.log('Autonomous result data:', data);
-                displayAutonomousResult(data);
-            } catch (error) {
-                console.error('Autonomous error:', error);
-                resultBox.innerHTML = `<h3>❌ Error</h3><p>${error.message}</p><p style="font-size: 0.9em; color: #666; margin-top: 10px;">Check browser console (F12) for details.</p>`;
-                resultBox.style.display = 'block';
-                resultBox.classList.add('show');
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = '🤖 Run Autonomous Recovery';
-            }
+                        const data = await response.json();
+                        console.log('Autonomous result data:', data);
+                        displayAutonomousResult(data);
+                    } catch (error) {
+                        console.error('Autonomous error:', error);
+                        resultBox.innerHTML = `<h3>❌ Error</h3><p>${error.message}</p><p style="font-size: 0.9em; color: #666; margin-top: 10px;">Check browser console (F12) for details.</p>`;
+                        resultBox.style.display = 'block';
+                        resultBox.classList.add('show');
+                    } finally {
+                        btn.disabled = false;
+                        btn.innerHTML = '🤖 Run Autonomous Recovery';
+                    }
                 });
             } else {
                 console.error('autonomous-form not found!');
@@ -740,10 +691,6 @@ Deployment timeout after 300s"
 
                     try {
                         console.log('Fetching from:', `${API_BASE}/api/autonomous`);
-                        resultBox.style.display = 'block';
-                        resultBox.innerHTML = '<p style="text-align: center; padding: 20px;"><span class="loading"></span> Running demo autonomous recovery...</p>';
-                        resultBox.classList.add('show');
-                        
                         const response = await fetch(`${API_BASE}/api/autonomous`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
@@ -857,6 +804,57 @@ Deployment timeout after 300s"
                 autonomousBtn: document.getElementById('autonomous-btn') ? 'found' : 'NOT FOUND',
                 autonomousDemoBtn: document.getElementById('autonomous-demo-btn') ? 'found' : 'NOT FOUND'
             });
+        }
+
+        function displayDiagnoseResult(data) {
+            const resultBox = document.getElementById('diagnose-result');
+            if (!resultBox) {
+                console.error('diagnose-result element not found!');
+                return;
+            }
+            
+            let html = `<h3>${data.demo ? '🎯 Demo Mode Result' : '✅ Diagnosis Result'}</h3>`;
+            
+            if (data.demo) {
+                html += '<p><span class="badge badge-demo">DEMO MODE</span></p>';
+            }
+
+            html += `
+                <div class="result-item">
+                    <strong>Issue ID:</strong> ${data.issueId}
+                </div>
+                <div class="result-item">
+                    <strong>Severity:</strong> ${data.severity}
+                </div>
+                <div class="result-item">
+                    <strong>Summary:</strong> ${data.summary}
+                </div>
+                <div class="result-item">
+                    <strong>Root Cause:</strong> ${data.rootCause}
+                </div>
+                <div class="result-item">
+                    <strong>Suggested Fixes:</strong>
+                    <ul style="margin-top: 10px; margin-left: 20px;">
+                        ${data.suggestedFixes.map(fix => 
+                            `<li>${fix.description} (Confidence: ${(fix.confidence * 100).toFixed(0)}%)</li>`
+                        ).join('')}
+                    </ul>
+                </div>
+                <div class="result-item">
+                    <strong>Auto-fix Recommended:</strong> ${data.canAutoFix ? '✅ Yes' : '❌ No'}
+                </div>
+            `;
+
+            resultBox.innerHTML = html;
+            resultBox.style.display = 'block';
+            resultBox.classList.add('show');
+            console.log('Diagnose result displayed successfully');
+            console.log('Result box element:', resultBox);
+            console.log('Result box display style:', resultBox.style.display);
+            console.log('Result box classes:', resultBox.className);
+            
+            // Force scroll to result box
+            resultBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
 
         function displayAutonomousResult(data) {
