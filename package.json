@@ -8,6 +8,11 @@
     "start": "node src/index.js",
     "dev": "node --watch src/index.js",
     "cli": "node src/index.js",
+    "autonomous": "node src/index.js autonomous",
+    "monitor": "node src/index.js monitor",
+    "diagnose": "node src/index.js diagnose",
+    "fix": "node src/index.js fix",
+    "status": "node src/index.js status",
     "test": "node --test",
     "build": "echo 'Build script placeholder'"
   },

@@ -1,0 +1,151 @@
+[1mdiff --git a/app.py b/app.py[m
+[1mdeleted file mode 100644[m
+[1mindex 26937c7..0000000[m
+[1m--- a/app.py[m
+[1m+++ /dev/null[m
+[36m@@ -1,145 +0,0 @@[m
+[31m-from flask import Flask, render_template, jsonify, request, send_from_directory[m
+[31m-import subprocess[m
+[31m-import json[m
+[31m-import os[m
+[31m-from flask_cors import CORS[m
+[31m-[m
+[31m-app = Flask(__name__, static_folder='public', static_url_path='')[m
+[31m-CORS(app)  # Enable CORS for all routes[m
+[31m-[m
+[31m-# Initialize stats[m
+[31m-stats = {[m
+[31m-    "tasks_executed": 0,[m
+[31m-    "decisions_made": 0,[m
+[31m-    "success_rate": 0,[m
+[31m-    "issues_resolved": 0[m
+[31m-}[m
+[31m-[m
+[31m-# Load existing stats if file exists[m
+[31m-STATS_FILE = 'public/stats.json'[m
+[31m-if os.path.exists(STATS_FILE):[m
+[31m-    with open(STATS_FILE, 'r') as f:[m
+[31m-        try:[m
+[31m-            stats = json.load(f)[m
+[31m-        except:[m
+[31m-            pass[m
+[31m-[m
+[31m-@app.route('/')[m
+[31m-def index():[m
+[31m-    """Serve the main dashboard page"""[m
+[31m-    return send_from_directory('public', 'index.html')[m
+[31m-[m
+[31m-@app.route('/api/stats', methods=['GET'])[m
+[31m-def get_stats():[m
+[31m-    """Get current statistics (for dashboard)"""[m
+[31m-    return jsonify(stats)[m
+[31m-[m
+[31m-@app.route('/api/stats/update', methods=['POST'])[m
+[31m-def update_stats():[m
+[31m-    """Update statistics (called by CLI)"""[m
+[31m-    global stats[m
+[31m-    data = request.json[m
+[31m-    [m
+[31m-    # Merge new stats[m
+[31m-    for key in stats:[m
+[31m-        if key in data:[m
+[31m-            if key == 'success_rate' and data[key] > 0:[m
+[31m-                # For success rate, calculate average[m
+[31m-                current_total = stats['tasks_executed'] * (stats['success_rate'] / 100) if stats['tasks_executed'] > 0 else 0[m
+[31m-                new_success = data.get('issues_resolved', 0)[m
+[31m-                new_total = stats['tasks_executed'] + data.get('tasks_executed', 0)[m
+[31m-                stats['success_rate'] = ((current_total + new_success) / new_total * 100) if new_total > 0 else 0[m
+[31m-            else:[m
+[31m-                # For counts, add them up[m
+[31m-                stats[key] += data.get(key, 0)[m
+[31m-    [m
+[31m-    # Save to file for frontend[m
+[31m-    with open(STATS_FILE, 'w') as f:[m
+[31m-        json.dump(stats, f, indent=2)[m
+[31m-    [m
+[31m-    return jsonify({"success": True, "stats": stats})[m
+[31m-[m
+[31m-@app.route('/api/debug', methods=['POST'])[m
+[31m-def run_debug():[m
+[31m-    """Run the debugger from web interface"""[m
+[31m-    data = request.json[m
+[31m-    error_log = data.get('error_log', '')[m
+[31m-    [m
+[31m-    if not error_log:[m
+[31m-        return jsonify({"error": "No error log provided"}), 400[m
+[31m-    [m
+[31m-    # Save error to temp file[m
+[31m-    temp_file = 'temp_error.log'[m
+[31m-    with open(temp_file, 'w') as f:[m
+[31m-        f.write(error_log)[m
+[31m-    [m
+[31m-    try:[m
+[31m-        # Run your CLI tool[m
+[31m-        # Note: Adjust this command to match how your CLI works[m
+[31m-        cmd = ['python', '-m', 'src.autodebugger', 'analyze', temp_file][m
+[31m-        [m
+[31m-        result = subprocess.run([m
+[31m-            cmd,[m
+[31m-            capture_output=True,[m
+[31m-            text=True,[m
+[31m-            timeout=30[m
+[31m-        )[m
+[31m-        [m
+[31m-        # Update stats based on result[m
+[31m-        update_data = {[m
+[31m-            "tasks_executed": 1,[m
+[31m-            "decisions_made": 1,[m
+[31m-            "issues_resolved": 1 if result.returncode == 0 else 0[m
+[31m-        }[m
+[31m-        [m
+[31m-        # Update stats internally[m
+[31m-        for key in stats:[m
+[31m-            if key in update_data:[m
+[31m-                stats[key] += update_data[key][m
+[31m-        [m
+[31m-        # Recalculate success rate[m
+[31m-        if stats['tasks_executed'] > 0:[m
+[31m-            stats['success_rate'] = (stats['issues_resolved'] / stats['tasks_executed']) * 100[m
+[31m-        [m
+[31m-        # Save updated stats[m
+[31m-        with open(STATS_FILE, 'w') as f:[m
+[31m-            json.dump(stats, f, indent=2)[m
+[31m-        [m
+[31m-        return jsonify({[m
+[31m-            "success": result.returncode == 0,[m
+[31m-            "output": result.stdout,[m
+[31m-            "error": result.stderr,[m
+[31m-            "returncode": result.returncode,[m
+[31m-            "stats": stats[m
+[31m-        })[m
+[31m-        [m
+[31m-    except subprocess.TimeoutExpired:[m
+[31m-        return jsonify({"error": "Debugger timed out"}), 500[m
+[31m-    except Exception as e:[m
+[31m-        return jsonify({"error": str(e)}), 500[m
+[31m-    finally:[m
+[31m-        # Clean up temp file[m
+[31m-        if os.path.exists(temp_file):[m
+[31m-            os.remove(temp_file)[m
+[31m-[m
+[31m-@app.route('/api/reset', methods=['POST'])[m
+[31m-def reset_stats():[m
+[31m-    """Reset all statistics"""[m
+[31m-    global stats[m
+[31m-    stats = {[m
+[31m-        "tasks_executed": 0,[m
+[31m-        "decisions_made": 0,[m
+[31m-        "success_rate": 0,[m
+[31m-        "issues_resolved": 0[m
+[31m-    }[m
+[31m-    [m
+[31m-    with open(STATS_FILE, 'w') as f:[m
+[31m-        json.dump(stats, f, indent=2)[m
+[31m-    [m
+[31m-    return jsonify({"success": True, "stats": stats})[m
+[31m-[m
+[31m-if __name__ == '__main__':[m
+[31m-    print("🚀 Starting AutoDebugger Dashboard Server...")[m
+[31m-    print("🌐 Dashboard available at: http://localhost:5000")[m
+[31m-    print("📊 API available at: http://localhost:5000/api/stats")[m
+[31m-    app.run(debug=True, port=5000)[m

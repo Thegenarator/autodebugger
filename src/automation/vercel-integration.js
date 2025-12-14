@@ -19,6 +19,21 @@ export class VercelIntegration {
    * Trigger a new deployment
    */
   async deploy(prNumber = null) {
+    // Validate required fields
+    if (!this.vercelToken) {
+      return {
+        success: false,
+        error: 'VERCEL_TOKEN not found in environment variables. Set it in .env file or use --demo flag to simulate.'
+      };
+    }
+    
+    if (!this.projectId) {
+      return {
+        success: false,
+        error: 'VERCEL_PROJECT_ID not found in environment variables. Set it in .env file or use --demo flag to simulate.'
+      };
+    }
+    
     try {
       const { data } = await axios.post(
         `${this.baseUrl}/v13/deployments`,
@@ -49,6 +64,28 @@ export class VercelIntegration {
         message: `Deployment triggered: ${data.url}`
       };
     } catch (error) {
+      // Enhanced error handling
+      if (error.response) {
+        const status = error.response.status;
+        const errorData = error.response.data;
+        
+        if (status === 400) {
+          return {
+            success: false,
+            error: `Vercel API error (400): ${errorData.error?.message || errorData.message || 'Bad request'}. Check VERCEL_TOKEN, VERCEL_PROJECT_ID, and VERCEL_TEAM_ID in .env file.`
+          };
+        } else if (status === 401) {
+          return {
+            success: false,
+            error: `Vercel authentication failed (401): Invalid VERCEL_TOKEN. Get a new token from https://vercel.com/account/tokens`
+          };
+        } else {
+          return {
+            success: false,
+            error: `Vercel API error (${status}): ${errorData.error?.message || errorData.message || error.message}`
+          };
+        }
+      }
       return {
         success: false,
         error: error.message || 'Failed to trigger deployment'
