@@ -1,43 +1,4 @@
-{
-  "name": "autodebugger",
-  "version": "1.0.0",
-  "description": "A Self-Healing Deployment AI Agent",
-  "main": "src/index.js",
-  "type": "module",
-  "scripts": {
-    "start": "node src/index.js",
-    "dev": "node --watch src/index.js",
-    "cli": "node src/index.js",
-    "test": "node --test",
-    "build": "echo 'Build script placeholder'"
-  },
-  "keywords": [
-    "ai",
-    "deployment",
-    "automation",
-    "debugging",
-    "self-healing",
-    "cline",
-    "kestra",
-    "oumi",
-    "vercel"
-  ],
-  "author": "",
-  "license": "MIT",
-  "dependencies": {
-    "@octokit/rest": "^20.0.2",
-    "axios": "^1.6.2",
-    "chalk": "^5.3.0",
-    "commander": "^11.1.0",
-    "dotenv": "^16.3.1",
-    "express": "^5.2.1",
-    "openai": "^4.20.1",
-    "ora": "^7.0.1"
-  },
-  "devDependencies": {
-    "@types/node": "^20.10.0"
-  },
-  "engines": {
-    "node": ">=18.0.0"
-  }
+// AutoDebugger: Updated configuration
+"scripts": {
+  "build": "node build.js"
 }
