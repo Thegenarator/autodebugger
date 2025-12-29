@@ -13,28 +13,51 @@ export async function autonomousCommand(deploymentUrl, options = {}) {
   // Check if we should force/demo mode
   const force = options.force || false;
   const hasApiKey = process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.trim() !== '';
-  const demo = options.demo || (!hasApiKey && !force); // Only auto-enable demo if no API key AND not forcing
+  const prod = options.prod || false;
+  const dryRun = options.dryRun || false;
+  // If --prod is explicitly set, don't auto-enable demo mode
+  const demo = options.demo || (!prod && !force && !hasApiKey); // demo if flag, or no key while not forcing prod
   
-  // Debug info
-  if (process.env.DEBUG) {
+  // Debug info - always show when --prod is used
+  if (prod || process.env.DEBUG) {
+    console.log(chalk.gray(`DEBUG: Options received: ${JSON.stringify(options)}`));
+    console.log(chalk.gray(`DEBUG: prod flag: ${prod}`));
     console.log(chalk.gray(`DEBUG: OPENAI_API_KEY present: ${hasApiKey ? 'YES' : 'NO'}`));
+    console.log(chalk.gray(`DEBUG: GITHUB_TOKEN present: ${process.env.GITHUB_TOKEN ? 'YES' : 'NO'}`));
+    console.log(chalk.gray(`DEBUG: VERCEL_TOKEN present: ${process.env.VERCEL_TOKEN ? 'YES' : 'NO'}`));
     console.log(chalk.gray(`DEBUG: Force mode: ${force}`));
     console.log(chalk.gray(`DEBUG: Demo mode: ${demo}\n`));
   }
   
-  if (options.demo) {
-    console.log(chalk.yellow('📝 Running in DEMO mode (--demo flag set)\n'));
-  } else if (!hasApiKey && !force) {
-    console.log(chalk.yellow('📝 Running in DEMO mode (no OPENAI_API_KEY found in environment)\n'));
-    console.log(chalk.gray('   Tip: Add OPENAI_API_KEY to .env file or use --force to run anyway\n'));
-  } else if (force) {
-    console.log(chalk.yellow('⚡ Running in FORCE mode - will execute full loop regardless of deployment status\n'));
+  if (options.demo || demo) {
+    console.log(chalk.yellow('📝 Running in DEMO mode (--demo or auto-demo)\n'));
+  } else if (dryRun) {
+    console.log(chalk.yellow('🛟 Running in DRY-RUN mode (no external side effects)\n'));
+  } else if (prod) {
+    console.log(chalk.green('🔑 Running in PRODUCTION mode - will use real external APIs\n'));
+    // Check env vars upfront and warn if missing
+    const missing = [];
+    if (!process.env.GITHUB_TOKEN) missing.push('GITHUB_TOKEN');
+    if (!process.env.GITHUB_OWNER) missing.push('GITHUB_OWNER');
+    if (!process.env.GITHUB_REPO) missing.push('GITHUB_REPO');
+    if (!process.env.VERCEL_TOKEN) missing.push('VERCEL_TOKEN');
+    if (!process.env.VERCEL_PROJECT_ID) missing.push('VERCEL_PROJECT_ID');
+    if (!process.env.OPENAI_API_KEY) missing.push('OPENAI_API_KEY');
+    if (missing.length > 0) {
+      console.log(chalk.yellow(`⚠️  Warning: Missing env vars: ${missing.join(', ')}`));
+      console.log(chalk.yellow(`   Make sure to export these in your shell or set them in .env file\n`));
+    } else {
+      console.log(chalk.green('✓ All required environment variables are set\n'));
+    }
+  } else if (force && !prod) {
+    console.log(chalk.yellow('⚡ Running in FORCE mode (safe/sim) - full loop regardless of status\n'));
   } else {
-    console.log(chalk.green('🔑 API key detected - running in REAL mode\n'));
+    console.log(chalk.yellow('⚠️  Running in SAFE mode (no real APIs)\n'));
+    console.log(chalk.gray('   To run with real APIs, use: npm run cli -- autonomous <url> --prod\n'));
   }
   
   const loop = new AutonomousLoop();
-  const result = await loop.execute(deploymentUrl, { force, demo });
+  const result = await loop.execute(deploymentUrl, { force, demo, prod, dryRun });
   
   if (result.success) {
     if (result.action === 'none') {

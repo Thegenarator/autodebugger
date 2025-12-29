@@ -37,28 +37,37 @@ export class AutonomousLoop {
    * This is what makes your project a winner!
    */
   async execute(deploymentUrl, options = {}) {
-    const { force = false, demo = false } = options;
+    const { force = false, demo = false, prod = false, dryRun = false } = options;
+    // Safe-by-default: if not prod, treat as simulation (no external calls)
+    const simulate = demo || dryRun || !prod;
+    const modeLabel = demo ? 'DEMO' : simulate ? 'SAFE (no real APIs)' : 'PROD';
     
     console.log(chalk.bold.blue('\n🔄 Starting Autonomous Deployment Recovery Loop\n'));
     console.log(chalk.gray('─'.repeat(60)));
     
-    if (demo || force) {
-      console.log(chalk.yellow(`⚠️  Running in ${demo ? 'DEMO' : 'FORCE'} mode - will execute full loop regardless of deployment status\n`));
+    if (prod) {
+      console.log(chalk.green(`🔑 Running in ${modeLabel} mode - using real external APIs\n`));
+    } else if (simulate || force) {
+      console.log(chalk.yellow(`⚠️  Running in ${modeLabel} mode - will execute full loop regardless of deployment status\n`));
     }
 
     try {
+      // Fast-fail env validation when we intend to hit real APIs
+      if (!simulate) {
+        this._validateProdEnv();
+      }
       // Step 1: Detect deployment failure
       console.log(chalk.cyan('\n[1/8] 🔍 Detecting deployment failure...'));
       const deploymentStatus = await this.cline.checkDeployment(deploymentUrl);
       
-      if (deploymentStatus.healthy && !force && !demo) {
+      if (deploymentStatus.healthy && !force && !simulate) {
         console.log(chalk.green('✓ Deployment is healthy - no action needed'));
         console.log(chalk.yellow('\n💡 Tip: Use --force or --demo flag to run the full autonomous loop anyway'));
         return { success: true, action: 'none' };
       }
       
       // In demo/force mode, simulate a failure scenario
-      if ((force || demo) && deploymentStatus.healthy) {
+      if ((force || simulate) && deploymentStatus.healthy) {
         console.log(chalk.yellow('⚠️  Deployment appears healthy, but running full loop in demo mode...'));
         console.log(chalk.gray('   Simulating a common deployment issue for demonstration'));
         
@@ -86,19 +95,19 @@ export class AutonomousLoop {
 
       // Step 2: Summarize error logs using Kestra AI Agent
       console.log(chalk.cyan('\n[2/8] 🧠 Summarizing errors with Kestra AI Agent...'));
-      if (demo) {
+      if (simulate) {
         console.log(chalk.gray('   📝 Demo mode: Using simulated AI summarization'));
       }
       const summary = await this.kestra.summarizeAndDecide({
         rawLogs: JSON.stringify(deploymentStatus),
         clineAnalysis: { errors: deploymentStatus.errors },
         sourceType: 'deployment'
-      }, { demo });
+      }, { demo: simulate });
       console.log(chalk.green(`✓ Summary: ${summary.summary.substring(0, 60)}...`));
 
       // Step 3: Decide right fix using Oumi RL Agent
       console.log(chalk.cyan('\n[3/8] 🎯 Consulting Oumi RL agent for optimal fix strategy...'));
-      if (demo) {
+      if (simulate) {
         console.log(chalk.gray('   📝 Demo mode: Using simulated RL strategy selection'));
       }
       const rlStrategy = await this.oumi.getOptimalFixStrategy({
@@ -106,22 +115,22 @@ export class AutonomousLoop {
         summary: summary.summary,
         severity: summary.severity,
         details: { type: deploymentStatus.errors[0]?.type || 'unknown' }
-      }, { demo });
+      }, { demo: simulate });
       console.log(chalk.green(`✓ Strategy: ${rlStrategy.strategy} (Confidence: ${(rlStrategy.confidence * 100).toFixed(0)}%)`));
 
       // Step 4: Automatically fix code using Cline CLI
       console.log(chalk.cyan('\n[4/8] 🔧 Generating fix using Cline CLI...'));
-      if (demo) {
+      if (simulate) {
         console.log(chalk.gray('   📝 Demo mode: Using simulated fix generation'));
       }
       const fixPlan = await this.cline.generateFix({
         ...summary,
         strategy: rlStrategy
-      }, { demo });
+      }, { demo: simulate });
       console.log(chalk.green(`✓ Fix plan generated (${fixPlan.changes.length} change(s))`));
 
       // If no actionable changes in demo mode, create demo changes
-      if ((demo || !process.env.GITHUB_TOKEN) && (!fixPlan.changes || fixPlan.changes.length === 0)) {
+      if ((simulate || !process.env.GITHUB_TOKEN) && (!fixPlan.changes || fixPlan.changes.length === 0)) {
         console.log(chalk.yellow('\n⚠ No actionable changes generated; creating demo changes for demonstration...'));
         // Add demo changes to fixPlan
         fixPlan.changes = [
@@ -151,8 +160,8 @@ export class AutonomousLoop {
       let prResult;
       
       // In demo mode, always simulate PR creation (even if token exists)
-      if (demo) {
-        console.log(chalk.yellow('   Demo mode: Simulating PR creation (no GITHUB_TOKEN)'));
+      if (simulate) {
+        console.log(chalk.yellow('   Demo/safe mode: Simulating PR creation (no real GitHub calls)'));
         prResult = {
           success: true,
           branchName: `autodebugger/fix-demo-${Date.now()}`,
@@ -185,7 +194,7 @@ export class AutonomousLoop {
       console.log(chalk.cyan('\n[6/8] 🤖 CodeRabbit reviewing PR automatically...'));
       
       let codeRabbitStatus;
-      if (demo) {
+      if (simulate) {
         // Demo mode: simulate CodeRabbit review
         console.log(chalk.yellow(`   Demo mode: Simulating CodeRabbit review...`));
         await this._wait(2000);
@@ -221,7 +230,7 @@ export class AutonomousLoop {
       console.log(chalk.cyan('\n[7/8] 🚀 Redeploying on Vercel...'));
       
       let deployResult;
-      if (demo) {
+      if (simulate) {
         // Demo mode: Skip Vercel redeploy entirely
         console.log(chalk.yellow(`   📝 Demo mode: Skipping Vercel redeploy (not linked to real project)`));
         deployResult = {
@@ -235,23 +244,38 @@ export class AutonomousLoop {
       } else {
         // Real Vercel redeployment - validate credentials first
         if (!process.env.VERCEL_TOKEN || !process.env.VERCEL_PROJECT_ID) {
-          throw new Error('Vercel redeploy skipped: VERCEL_TOKEN or VERCEL_PROJECT_ID missing. Set in .env file or use --demo flag.');
+          console.log(chalk.yellow('⚠️  Vercel redeploy skipped: VERCEL_TOKEN or VERCEL_PROJECT_ID missing'));
+          console.log(chalk.gray('   Note: If project is GitHub-linked, Vercel will auto-deploy when PR is merged'));
+          deployResult = {
+            success: true,
+            url: deploymentUrl,
+            state: 'SKIPPED',
+            message: 'Vercel will auto-deploy on merge (GitHub-linked project)'
+          };
+        } else {
+          deployResult = await this.vercel.redeployAfterFix(prResult.prNumber);
+          
+          if (!deployResult.success) {
+            // Don't fail the entire loop if redeploy fails - Vercel may auto-deploy
+            console.log(chalk.yellow(`⚠️  Manual redeploy failed: ${deployResult.error}`));
+            console.log(chalk.gray('   Note: If project is GitHub-linked, Vercel will auto-deploy when PR is merged'));
+            deployResult = {
+              success: true,
+              url: deploymentUrl,
+              state: 'SKIPPED',
+              message: 'Vercel will auto-deploy on merge (GitHub-linked project)'
+            };
+          } else {
+            console.log(chalk.green(`✓ Deployment triggered: ${deployResult.url}`));
+          }
         }
-        
-        deployResult = await this.vercel.redeployAfterFix(prResult.prNumber);
-        
-        if (!deployResult.success) {
-          throw new Error(`Failed to redeploy: ${deployResult.error}`);
-        }
-        
-        console.log(chalk.green(`✓ Deployment triggered: ${deployResult.url}`));
       }
 
       // Step 8: Verify deployment
       console.log(chalk.cyan('\n[8/8] ✅ Verifying deployment health...'));
       
       let healthCheck;
-      if (demo) {
+      if (simulate) {
         // Demo mode: Skip health check (no real deployment)
         console.log(chalk.yellow(`   📝 Demo mode: Skipping health check (no real deployment)`));
         healthCheck = {
@@ -287,7 +311,7 @@ export class AutonomousLoop {
       // Use LLM-as-a-Judge to evaluate fix quality (Oumi bonus requirement)
       if (healthCheck.healthy) {
         // In demo mode, use simulated evaluation (no OpenAI calls)
-        if (demo) {
+        if (simulate) {
           const qualityEvaluation = await this.oumi.evaluateFixQuality(fixPlan, {
             success: true,
             timeSaved: 45,
@@ -301,11 +325,11 @@ export class AutonomousLoop {
           const hasApiKey = process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.trim() !== '';
           if (hasApiKey) {
             try {
-              const qualityEvaluation = await this.oumi.evaluateFixQuality(fixPlan, {
+          const qualityEvaluation = await this.oumi.evaluateFixQuality(fixPlan, {
                 success: true,
                 timeSaved: 45,
                 issuesResolved: 1
-              }, { demo: false });
+          }, { demo: false });
               
               console.log(chalk.gray(`   Fix quality score: ${(qualityEvaluation.score * 100).toFixed(0)}%`));
               if (qualityEvaluation.llmJudged) {
@@ -342,9 +366,9 @@ export class AutonomousLoop {
       console.log(chalk.white(`PR: #${prResult.prNumber}`));
       console.log(chalk.white(`Deployment: ${deployResult.url}`));
       console.log(chalk.white(`Status: ${healthCheck.healthy ? 'Healthy' : 'In Progress'}`));
-      if (demo) {
-        console.log(chalk.yellow(`\n📝 Note: This was a DEMO run - no actual changes were made`));
-        console.log(chalk.gray(`   To run with real API calls, set OPENAI_API_KEY, GITHUB_TOKEN, and VERCEL_TOKEN`));
+      if (simulate) {
+        console.log(chalk.yellow(`\n📝 Note: This was a ${modeLabel} run - no real external changes were made`));
+        console.log(chalk.gray(`   To run with real API calls, pass --prod and set OPENAI_API_KEY, GITHUB_TOKEN, and VERCEL_TOKEN`));
       }
       console.log(chalk.gray('─'.repeat(60)));
 
@@ -363,6 +387,19 @@ export class AutonomousLoop {
         success: false,
         error: error.message
       };
+    }
+  }
+
+  _validateProdEnv() {
+    const missing = [];
+    if (!process.env.GITHUB_TOKEN) missing.push('GITHUB_TOKEN');
+    if (!process.env.GITHUB_OWNER) missing.push('GITHUB_OWNER');
+    if (!process.env.GITHUB_REPO) missing.push('GITHUB_REPO');
+    if (!process.env.VERCEL_TOKEN) missing.push('VERCEL_TOKEN');
+    if (!process.env.VERCEL_PROJECT_ID) missing.push('VERCEL_PROJECT_ID');
+    if (!process.env.OPENAI_API_KEY) missing.push('OPENAI_API_KEY');
+    if (missing.length) {
+      throw new Error(`Missing required env vars for prod run: ${missing.join(', ')}. Pass --demo or --prod with env set.`);
     }
   }
 

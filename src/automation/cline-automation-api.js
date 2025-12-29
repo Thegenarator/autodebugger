@@ -72,12 +72,25 @@ export class ClineAutomationAPI {
   /**
    * Analyze logs using AI (OpenAI API - same as Cline)
    */
-  async analyzeLogs(logData) {
+  async analyzeLogs(logData, options = {}) {
     this.tasksExecuted++;
+    
+    // In demo/safe mode, avoid OpenAI calls to keep logs clean
+    if (options.demo) {
+      return {
+        errorCount: (logData.match(/error/gi) || []).length || 2,
+        warningCount: (logData.match(/warning/gi) || []).length || 1,
+        patterns: this._detectPatterns(logData),
+        context: logData.split('\n').slice(-10).join('\n'),
+        rootCause: 'Simulated root cause (demo)',
+        timestamp: new Date().toISOString(),
+        demo: true
+      };
+    }
     
     try {
       const response = await this.openai.chat.completions.create({
-        model: process.env.CLINE_MODEL || 'gpt-4o',
+        model: process.env.CLINE_MODEL || 'gpt-4o-mini',
         messages: [
           {
             role: 'system',
@@ -132,7 +145,7 @@ export class ClineAutomationAPI {
     if (hasApiKey) {
       try {
         const response = await this.openai.chat.completions.create({
-          model: process.env.CLINE_MODEL || 'gpt-4o',
+          model: process.env.CLINE_MODEL || 'gpt-4o-mini',
           messages: [
             {
               role: 'system',
@@ -203,9 +216,9 @@ export class ClineAutomationAPI {
     if (changes.length === 0) {
       changes.push({
         type: 'modify',
-        description: 'Fix deployment configuration issue',
-        file: 'package.json',
-        code: `// AutoDebugger: Updated configuration\n"scripts": {\n  "build": "node build.js"\n}\n`
+        description: 'Update build script configuration',
+        file: 'src/utils/config.js',
+        code: `// AutoDebugger: Updated configuration\nmodule.exports = {\n  buildCommand: 'node build.js'\n};\n`
       });
     }
     

@@ -35,7 +35,7 @@ export class VercelIntegration {
     }
     
     try {
-      const { data } = await axios.post(
+      const { data } = await this._withRetry(() => axios.post(
         `${this.baseUrl}/v13/deployments`,
         {
           name: this.projectId,
@@ -54,7 +54,7 @@ export class VercelIntegration {
           },
           params: this.teamId ? { teamId: this.teamId } : {}
         }
-      );
+      ));
 
       return {
         success: true,
@@ -95,15 +95,102 @@ export class VercelIntegration {
 
   /**
    * Redeploy after fix is merged
+   * For GitHub-linked projects, Vercel auto-deploys on merge.
+   * This method triggers a manual deployment from main branch.
    */
   async redeployAfterFix(prNumber) {
     console.log(`Redeploying after PR #${prNumber} is merged...`);
     
-    // Wait a bit for merge to complete
+    // Wait a bit for merge to propagate
     await this._wait(2000);
     
-    // Trigger new deployment
-    return await this.deploy();
+    // For GitHub-linked projects, deploy from main branch (not PR branch)
+    // Vercel will auto-deploy, but we can trigger manually from main
+    return await this.deployFromMain();
+  }
+
+  /**
+   * Deploy from main branch
+   */
+  async deployFromMain() {
+    // Validate required fields
+    if (!this.vercelToken) {
+      return {
+        success: false,
+        error: 'VERCEL_TOKEN not found in environment variables. Set it in .env file or use --demo flag to simulate.'
+      };
+    }
+    
+    if (!this.projectId) {
+      return {
+        success: false,
+        error: 'VERCEL_PROJECT_ID not found in environment variables. Set it in .env file or use --demo flag to simulate.'
+      };
+    }
+    
+    try {
+      const owner = process.env.GITHUB_OWNER;
+      const repo = process.env.GITHUB_REPO;
+      
+      // If GitHub-linked, use gitSource with main branch
+      const deploymentPayload = {
+        name: this.projectId,
+        ...(owner && repo && {
+          gitSource: {
+            type: 'github',
+            repo: `${owner}/${repo}`,
+            ref: 'main'
+          }
+        })
+      };
+      
+      const { data } = await this._withRetry(() => axios.post(
+        `${this.baseUrl}/v13/deployments`,
+        deploymentPayload,
+        {
+          headers: {
+            Authorization: `Bearer ${this.vercelToken}`,
+            'Content-Type': 'application/json'
+          },
+          params: this.teamId ? { teamId: this.teamId } : {}
+        }
+      ));
+
+      return {
+        success: true,
+        deploymentId: data.id,
+        url: data.url,
+        state: data.readyState,
+        message: `Deployment triggered from main branch: ${data.url}`
+      };
+    } catch (error) {
+      // Enhanced error handling
+      if (error.response) {
+        const status = error.response.status;
+        const errorData = error.response.data;
+        
+        if (status === 400) {
+          return {
+            success: false,
+            error: `Vercel API error (400): ${errorData.error?.message || errorData.message || 'Bad request'}. Note: If project is GitHub-linked, Vercel will auto-deploy on merge. Check VERCEL_TOKEN, VERCEL_PROJECT_ID, and VERCEL_TEAM_ID in .env file.`
+          };
+        } else if (status === 401) {
+          return {
+            success: false,
+            error: `Vercel authentication failed (401): Invalid VERCEL_TOKEN. Get a new token from https://vercel.com/account/tokens`
+          };
+        } else {
+          return {
+            success: false,
+            error: `Vercel API error (${status}): ${errorData.error?.message || errorData.message || error.message}`
+          };
+        }
+      }
+      return {
+        success: false,
+        error: error.message || 'Failed to trigger deployment'
+      };
+    }
   }
 
   /**
@@ -246,6 +333,23 @@ export class VercelIntegration {
    */
   _wait(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  async _withRetry(fn, attempts = 3, delayMs = 1000) {
+    let lastError;
+    for (let i = 0; i < attempts; i++) {
+      try {
+        return await fn();
+      } catch (error) {
+        lastError = error;
+        const status = error.response?.status;
+        if (status && status < 500) break;
+        if (i < attempts - 1) {
+          await new Promise(res => setTimeout(res, delayMs));
+        }
+      }
+    }
+    throw lastError;
   }
 }
 

@@ -64,6 +64,8 @@ program
   .option('--auto-merge', 'Automatically merge PR after CodeRabbit review')
   .option('--force', 'Force execution even if deployment appears healthy (for testing)')
   .option('--demo', 'Run in demo mode with simulated failures (shows full loop)')
+  .option('--prod', 'Run with real external APIs (GitHub, Vercel, OpenAI) when env vars are set')
+  .option('--dry-run', 'Simulate without external side effects (safer than prod)')
   .action(autonomousCommand);
 
 program.parse();

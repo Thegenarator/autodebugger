@@ -9,21 +9,31 @@ import axios from 'axios';
 
 export class GitHubIntegration {
   constructor() {
-    this.githubToken = process.env.GITHUB_TOKEN;
-    this.owner = process.env.GITHUB_OWNER || 'your-username';
-    this.repo = process.env.GITHUB_REPO || 'autodebugger';
     this.baseUrl = 'https://api.github.com';
     
-    // Debug: Log token status (first 10 chars only for security)
-    if (process.env.DEBUG || !this.githubToken) {
-      console.log(`[DEBUG] GitHub token present: ${this.githubToken ? 'YES (' + this.githubToken.substring(0, 10) + '...)' : 'NO'}`);
-      console.log(`[DEBUG] GitHub owner: ${this.owner}`);
-      console.log(`[DEBUG] GitHub repo: ${this.repo}`);
-    }
-    
-    if (!this.githubToken) {
-      console.warn('[WARN] GITHUB_TOKEN not found in environment variables');
-    }
+    // Note: We read from process.env at runtime, not at construction time
+    // This ensures we always get the latest values even if dotenv loads later
+  }
+
+  /**
+   * Get GitHub token from environment (always reads fresh)
+   */
+  get githubToken() {
+    return process.env.GITHUB_TOKEN;
+  }
+
+  /**
+   * Get GitHub owner from environment (always reads fresh)
+   */
+  get owner() {
+    return process.env.GITHUB_OWNER;
+  }
+
+  /**
+   * Get GitHub repo from environment (always reads fresh)
+   */
+  get repo() {
+    return process.env.GITHUB_REPO;
   }
 
   /**
@@ -47,11 +57,17 @@ export class GitHubIntegration {
       };
     }
     
-    // Validate owner and repo
-    if (this.owner === 'your-username' || this.repo === 'autodebugger') {
+    // Validate owner and repo - getters always read fresh from process.env
+    const ownerValid = this.owner && typeof this.owner === 'string' && this.owner.trim().length > 0;
+    const repoValid = this.repo && typeof this.repo === 'string' && this.repo.trim().length > 0;
+    
+    if (!ownerValid || !repoValid) {
+      // More helpful error message
+      const ownerStatus = this.owner ? `"${this.owner}" (type: ${typeof this.owner})` : 'NOT SET';
+      const repoStatus = this.repo ? `"${this.repo}" (type: ${typeof this.repo})` : 'NOT SET';
       return {
         success: false,
-        error: `GITHUB_OWNER and GITHUB_REPO must be set in .env file. Current: owner=${this.owner}, repo=${this.repo}`
+        error: `GITHUB_OWNER and GITHUB_REPO must be set as non-empty strings in environment variables.\n   Current: GITHUB_OWNER=${ownerStatus}, GITHUB_REPO=${repoStatus}\n   Fix: Export them in your shell or set them in .env file`
       };
     }
     
@@ -95,7 +111,7 @@ export class GitHubIntegration {
    */
   async _createBranch(branchName) {
     // Get latest commit from main branch
-    const { data: refData } = await axios.get(
+    const { data: refData } = await this._withRetry(() => axios.get(
       `${this.baseUrl}/repos/${this.owner}/${this.repo}/git/ref/heads/main`,
       {
         headers: {
@@ -103,10 +119,10 @@ export class GitHubIntegration {
           Accept: 'application/vnd.github.v3+json'
         }
       }
-    );
+    ));
 
     // Create new branch
-    await axios.post(
+    await this._withRetry(() => axios.post(
       `${this.baseUrl}/repos/${this.owner}/${this.repo}/git/refs`,
       {
         ref: `refs/heads/${branchName}`,
@@ -118,7 +134,7 @@ export class GitHubIntegration {
           Accept: 'application/vnd.github.v3+json'
         }
       }
-    );
+    ));
 
     return branchName;
   }
@@ -188,7 +204,7 @@ export class GitHubIntegration {
     }
     
     // Create or update file
-    await axios.put(
+    await this._withRetry(() => axios.put(
       `${this.baseUrl}/repos/${this.owner}/${this.repo}/contents/${filePath}`,
       {
         message: `AutoDebugger: ${message}`,
@@ -202,7 +218,7 @@ export class GitHubIntegration {
           Accept: 'application/vnd.github.v3+json'
         }
       }
-    );
+    ));
   }
 
   /**
@@ -227,7 +243,7 @@ export class GitHubIntegration {
     }
     
     try {
-      const { data } = await axios.post(
+      const { data } = await this._withRetry(() => axios.post(
         `${this.baseUrl}/repos/${this.owner}/${this.repo}/pulls`,
         {
           title: `🤖 AutoDebugger: Fix for ${issueDetails.summary}`,
@@ -242,7 +258,7 @@ export class GitHubIntegration {
             Accept: 'application/vnd.github.v3+json'
           }
         }
-      );
+      ));
       
       return data;
     } catch (error) {
@@ -263,6 +279,24 @@ export class GitHubIntegration {
       }
       throw error;
     }
+  }
+
+  async _withRetry(fn, attempts = 3, delayMs = 1000) {
+    let lastError;
+    for (let i = 0; i < attempts; i++) {
+      try {
+        return await fn();
+      } catch (error) {
+        lastError = error;
+        // Only retry on 5xx or network errors
+        const status = error.response?.status;
+        if (status && status < 500) break;
+        if (i < attempts - 1) {
+          await new Promise(res => setTimeout(res, delayMs));
+        }
+      }
+    }
+    throw lastError;
   }
 
   /**
@@ -554,6 +588,24 @@ This PR will be automatically reviewed by CodeRabbit for:
     } catch (error) {
       throw new Error(`Failed to fetch failed workflows: ${error.message}`);
     }
+  }
+
+  async _withRetry(fn, attempts = 3, delayMs = 1000) {
+    let lastError;
+    for (let i = 0; i < attempts; i++) {
+      try {
+        return await fn();
+      } catch (error) {
+        lastError = error;
+        // Only retry on 5xx or network errors
+        const status = error.response?.status;
+        if (status && status < 500) break;
+        if (i < attempts - 1) {
+          await new Promise(res => setTimeout(res, delayMs));
+        }
+      }
+    }
+    throw lastError;
   }
 }
 

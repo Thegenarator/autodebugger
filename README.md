@@ -1,7 +1,7 @@
 # AutoDebugger
 ## Self-Healing Deployment AI Agent
 
-**Automatically detect, analyze, and recover from deployment failures — without human intervention.**
+**Automatically detect, analyze, and recover from deployment failures — with optional human-in-the-loop approval via pull requests.**
 
 AutoDebugger monitors deployments, reasons about failures, generates fixes, opens pull requests, reviews changes, and (optionally) redeploys your app.
 
@@ -29,16 +29,16 @@ Each step is designed to be **safe, observable, and auditable** through pull req
 4. **🔧 Fix** - Cline CLI generates code fixes automatically
 5. **📝 PR** - Creates pull request with proposed changes
 6. **🤖 Review** - CodeRabbit automatically reviews the PR
-7. **🚀 Deploy** - Redeploys on Vercel after approval
+7. **🚀 Deploy** - Redeploys on Vercel after PR approval and merge
 8. **✅ Verify** - Confirms deployment health and evaluates fix quality
 
-**Every action is visible, traceable, and reversible.**
+**Every action is visible, traceable, and reversible through pull requests and deployment logs.**
 
 ---
 
-## 🏆 Award-Winning Features
+## 🏆 Award Track Alignment
 
-Built for the **AI Agents Assemble Hackathon**, AutoDebugger integrates with multiple partner technologies:
+Designed to align with the following hackathon award tracks. Built for the **AI Agents Assemble Hackathon**, AutoDebugger integrates with multiple partner technologies:
 
 - **🏅 Infinity Build Award** - Cline CLI integration for automated code fixes
 - **🏅 Wakanda Data Award** - Kestra AI Agent for multi-source data summarization
@@ -208,6 +208,19 @@ npm run cli -- autonomous https://test.vercel.app --demo
 - **Development Workflow** - Catch and fix issues before production
 - **Team Productivity** - Reduce manual debugging time
 - **Award Submissions** - Demonstrate autonomous agent capabilities
+
+---
+
+## ⚠️ Current Limitations
+
+AutoDebugger is designed with safety and auditability as core principles. Current limitations reflect intentional design choices:
+
+- **Scope Focus**: AutoDebugger currently focuses on deployment and configuration-level failures (build scripts, environment configuration, CI/CD wiring)
+- **Application Logic**: Application-level logic bugs are surfaced but not automatically fixed yet
+- **Fix Quality**: Fix quality depends on available logs and repository context
+- **Production Requirements**: Production mode requires properly scoped API credentials (GitHub, Vercel, OpenAI)
+
+These limitations prioritize safety, traceability, and human oversight over fully automated fixes, ensuring all changes are reviewable through pull requests.
 
 ---
 
